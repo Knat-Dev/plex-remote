@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { VirtualPosterGrid } from '../../components/VirtualPosterGrid.tsx';
-import { PosterSkeleton } from '../../components/PosterSkeleton.tsx';
 import { SearchBar } from './SearchBar.tsx';
 import { useItemActions } from './useItemActions.tsx';
 import {
@@ -95,46 +94,48 @@ export function BrowseScreen() {
       ];
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 px-4">
-      <SearchBar value={q} onChange={(value) => setSearch({ q: value })} />
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      {/* Filters live in their own px-4 block; the grid owns its padding so
+          the scrollbar sits in the gutter, not over the posters. */}
+      <div className="flex flex-col gap-3 px-4">
+        <SearchBar value={q} onChange={(value) => setSearch({ q: value })} />
 
-      {!q && (
-        <div className="grid grid-cols-2 gap-2">
-          <Select value={server} onValueChange={(value) => setSearch({ server: value, lib })}>
-            <SelectTrigger className="w-full rounded-xl bg-secondary">
-              <SelectValue placeholder="Server" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All servers</SelectItem>
-              {(servers ?? []).map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {!q && (
+          <div className="grid grid-cols-2 gap-2">
+            <Select value={server} onValueChange={(value) => setSearch({ server: value, lib })}>
+              <SelectTrigger className="w-full rounded-xl bg-secondary">
+                <SelectValue placeholder="Server" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All servers</SelectItem>
+                {(servers ?? []).map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Select value={lib} onValueChange={(value) => setSearch({ lib: value })}>
-            <SelectTrigger className="w-full rounded-xl bg-secondary">
-              <SelectValue placeholder="Library" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ONDECK}>Continue Watching</SelectItem>
-              <SelectSeparator />
-              {libraryOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+            <Select value={lib} onValueChange={(value) => setSearch({ lib: value })}>
+              <SelectTrigger className="w-full rounded-xl bg-secondary">
+                <SelectValue placeholder="Library" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ONDECK}>Continue Watching</SelectItem>
+                <SelectSeparator />
+                {libraryOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
 
-      {list.isLoading ? (
-        <PosterSkeleton />
-      ) : list.isError || sectionsQuery.isError ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3">
+      {list.isError || sectionsQuery.isError ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4">
           <p className="text-sm text-muted-foreground">Couldn’t reach the server.</p>
           <Button
             variant="secondary"
@@ -147,7 +148,7 @@ export function BrowseScreen() {
             <RotateCw className="size-4" /> Retry
           </Button>
         </div>
-      ) : visibleItems.length === 0 ? (
+      ) : !list.isLoading && visibleItems.length === 0 ? (
         <p className="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
           {q
             ? 'No results'
@@ -156,7 +157,12 @@ export function BrowseScreen() {
               : 'Nothing here'}
         </p>
       ) : (
-        <VirtualPosterGrid items={visibleItems} onOpen={open} onLongPress={longPress} />
+        <VirtualPosterGrid
+          items={visibleItems}
+          loading={list.isLoading}
+          onOpen={open}
+          onLongPress={longPress}
+        />
       )}
 
       {drawer}

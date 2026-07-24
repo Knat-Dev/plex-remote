@@ -5,28 +5,40 @@ import { MediaCard } from './MediaCard.tsx';
 
 interface VirtualPosterGridProps {
   items: MediaItemDto[];
+  /** Render skeleton cells in the exact same layout instead of items. */
+  loading?: boolean;
   onOpen: (item: MediaItemDto) => void;
   onLongPress: (item: MediaItemDto) => void;
 }
 
 const GAP = 12;
-const TEXT_BLOCK = 44; // title + subtitle under the poster
+// Exact MediaCard text block: mt-1.5 (6) + title h-5 (20) + subtitle h-4 (16).
+const TEXT_BLOCK = 42;
+const SKELETON_COUNT = 12;
 
 /**
- * Row-virtualized poster grid (TanStack Virtual): only the visible rows are
- * mounted, so a 5000-item library scrolls like a 20-item one. The component
- * owns its scroll container; columns adapt to the measured width.
+ * Row-virtualized poster grid (TanStack Virtual): only visible rows mount, so a
+ * 5000-item library scrolls like a 20-item one. It also renders its OWN loading
+ * skeleton (same container, measurement, columns, gap and row height), so the
+ * grid element never unmounts between loading and loaded — the swap is
+ * pixel-identical with no reflow, remeasure flash or column jump.
  */
-export function VirtualPosterGrid({ items, onOpen, onLongPress }: VirtualPosterGridProps) {
+export function VirtualPosterGrid({ items, loading, onOpen, onLongPress }: VirtualPosterGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry) setWidth(entry.contentRect.width);
-    });
+    // Measure the content width (inside the container's own px-4) SYNCHRONOUSLY
+    // before first paint — the ResizeObserver's first callback lands after
+    // paint, so without this the grid shows one empty (black) frame.
+    const measure = () => {
+      const cs = getComputedStyle(el);
+      setWidth(el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
@@ -34,7 +46,8 @@ export function VirtualPosterGrid({ items, onOpen, onLongPress }: VirtualPosterG
   const columns = width >= 560 ? 4 : 3;
   const cardWidth = width > 0 ? (width - GAP * (columns - 1)) / columns : 0;
   const rowHeight = cardWidth * 1.5 + TEXT_BLOCK + GAP;
-  const rowCount = Math.ceil(items.length / columns);
+  const count = loading ? SKELETON_COUNT : items.length;
+  const rowCount = Math.ceil(count / columns);
 
   const virtualizer = useVirtualizer({
     count: rowCount,
@@ -43,13 +56,15 @@ export function VirtualPosterGrid({ items, onOpen, onLongPress }: VirtualPosterG
     overscan: 3,
   });
 
-  // Re-measure when the container resizes (row height depends on card width).
   useLayoutEffect(() => {
     virtualizer.measure();
   }, [rowHeight, virtualizer]);
 
   return (
-    <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+    <div
+      ref={scrollRef}
+      className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 [scrollbar-gutter:stable]"
+    >
       {width > 0 && (
         <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
           {virtualizer.getVirtualItems().map((row) => (
@@ -62,15 +77,47 @@ export function VirtualPosterGrid({ items, onOpen, onLongPress }: VirtualPosterG
                 gap: GAP,
               }}
             >
-              {items
-                .slice(row.index * columns, row.index * columns + columns)
-                .map((item) => (
-                  <MediaCard key={item.ratingKey} item={item} onOpen={onOpen} onLongPress={onLongPress} />
-                ))}
+              {Array.from({ length: columns }).map((_, col) => {
+                const index = row.index * columns + col;
+                if (index >= count) return null;
+                if (loading) return <SkeletonCard key={col} />;
+                const item = items[index];
+                return item ? (
+                  <MediaCard
+                    key={item.ratingKey}
+                    item={item}
+                    onOpen={onOpen}
+                    onLongPress={onLongPress}
+                  />
+                ) : null;
+              })}
             </div>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * A skeleton cell with byte-identical geometry to a MediaCard: the poster box
+ * mirrors MediaCard's exactly (aspect, radius, bg-secondary AND the ring-1
+ * ring-border — the ring is an outset 1px shadow that widens the poster's
+ * visible extent, so omitting it made skeletons read ~2px narrower). The two
+ * text lines occupy the same 20px + 16px under a 6px top margin.
+ */
+function SkeletonCard() {
+  return (
+    <div className="flex flex-col">
+      <div className="relative aspect-2/3 w-full overflow-hidden rounded-lg bg-secondary ring-1 ring-border">
+        <div className="absolute inset-0 animate-pulse bg-accent" />
+      </div>
+      <div className="mt-1.5 flex h-5 items-center">
+        <div className="h-3 w-4/5 animate-pulse rounded bg-accent" />
+      </div>
+      <div className="flex h-4 items-center">
+        <div className="h-2.5 w-1/2 animate-pulse rounded bg-accent" />
+      </div>
     </div>
   );
 }

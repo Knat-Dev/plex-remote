@@ -2,7 +2,6 @@ import { getRouteApi, useRouter } from '@tanstack/react-router';
 import { ChevronLeft, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { VirtualPosterGrid } from '../../components/VirtualPosterGrid.tsx';
-import { PosterSkeleton } from '../../components/PosterSkeleton.tsx';
 import { useItemActions } from './useItemActions.tsx';
 import { useChildren } from '../../api/queries.ts';
 
@@ -21,32 +20,37 @@ export function DrillScreen() {
   const children = useChildren(serverId, ratingKey);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 px-4">
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={() => router.history.back()}
-        className="self-start rounded-full"
-      >
-        <ChevronLeft className="size-4" />
-        {title || 'Back'}
-      </Button>
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <div className="px-4">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => router.history.back()}
+          className="self-start rounded-full"
+        >
+          <ChevronLeft className="size-4" />
+          {title || 'Back'}
+        </Button>
+      </div>
 
-      {children.isLoading ? (
-        <PosterSkeleton />
-      ) : children.isError ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3">
+      {children.isError ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4">
           <p className="text-sm text-muted-foreground">Couldn’t reach the server.</p>
           <Button variant="secondary" className="rounded-full" onClick={() => void children.refetch()}>
             <RotateCw className="size-4" /> Retry
           </Button>
         </div>
-      ) : !children.data || children.data.length === 0 ? (
+      ) : !children.isLoading && (children.data?.length ?? 0) === 0 ? (
         <p className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
           Nothing here
         </p>
       ) : (
-        <VirtualPosterGrid items={children.data} onOpen={open} onLongPress={longPress} />
+        <VirtualPosterGrid
+          items={children.data ?? []}
+          loading={children.isLoading}
+          onOpen={open}
+          onLongPress={longPress}
+        />
       )}
 
       {drawer}

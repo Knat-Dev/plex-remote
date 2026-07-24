@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { Check, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { Poster } from './Poster.tsx';
 import { TitleMarquee } from './TitleMarquee.tsx';
 import { useLongPress } from '../hooks/useLongPress.ts';
 import type { MediaItemDto } from '../api/types.ts';
@@ -26,7 +25,6 @@ export function MediaCard({ item, onOpen, onLongPress }: MediaCardProps) {
   const heading = item.showTitle ?? item.title;
   const line = item.subtitle ?? (item.year != null ? String(item.year) : null);
   const press = useLongPress(() => onOpen(item), () => onLongPress(item));
-  const [loaded, setLoaded] = useState(false);
 
   return (
     <div
@@ -37,54 +35,40 @@ export function MediaCard({ item, onOpen, onLongPress }: MediaCardProps) {
       className="group flex cursor-pointer flex-col text-left focus:outline-none"
     >
       <div className="relative aspect-2/3 w-full overflow-hidden rounded-lg bg-secondary ring-1 ring-border transition group-active:scale-[0.97]">
-        {item.thumbUrl ? (
-          <>
-            {/* Skeleton shimmer until the poster paints, then fade it in. */}
-            {!loaded && <div className="absolute inset-0 animate-pulse bg-muted" />}
-            <img
-              src={item.thumbUrl}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              onLoad={() => setLoaded(true)}
-              className={cn(
-                'h-full w-full object-cover transition-opacity duration-500',
-                loaded ? 'opacity-100' : 'opacity-0',
-              )}
-            />
-          </>
-        ) : (
-          <div className="flex h-full items-center justify-center px-2 text-center text-xs text-muted-foreground">
-            {heading}
-          </div>
-        )}
+        {/* Overlays are Poster children so they fade in with the image. */}
+        <Poster src={item.thumbUrl} fallback={heading}>
+          {item.browsable && (
+            <span className="absolute right-1.5 top-1.5 rounded-full bg-black/60 p-1 text-white backdrop-blur">
+              <ChevronRight className="size-3.5" />
+            </span>
+          )}
 
-        {item.browsable && (
-          <span className="absolute right-1.5 top-1.5 rounded-full bg-black/60 p-1 text-white backdrop-blur">
-            <ChevronRight className="size-3.5" />
-          </span>
-        )}
+          {item.watched ? (
+            <span className="absolute left-1.5 top-1.5 rounded-full bg-primary p-1 text-primary-foreground shadow">
+              <Check className="size-3" strokeWidth={3} />
+            </span>
+          ) : item.unwatchedCount != null ? (
+            <Badge className="absolute left-1.5 top-1.5 h-5 min-w-5 justify-center px-1.5 text-[10px] shadow">
+              {item.unwatchedCount}
+            </Badge>
+          ) : null}
 
-        {item.watched ? (
-          <span className="absolute left-1.5 top-1.5 rounded-full bg-primary p-1 text-primary-foreground shadow">
-            <Check className="size-3" strokeWidth={3} />
-          </span>
-        ) : item.unwatchedCount != null ? (
-          <Badge className="absolute left-1.5 top-1.5 h-5 min-w-5 justify-center px-1.5 text-[10px] shadow">
-            {item.unwatchedCount}
-          </Badge>
-        ) : null}
-
-        {/* Inset rounded progress pill with a track, Plex-style. */}
-        {progress > 0 && (
-          <div className="absolute inset-x-2 bottom-2 h-1.5 overflow-hidden rounded-full bg-black/55 backdrop-blur-sm">
-            <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
-          </div>
-        )}
+          {/* Inset rounded progress pill with a track, Plex-style. */}
+          {progress > 0 && (
+            <div className="absolute inset-x-2 bottom-2 h-1.5 overflow-hidden rounded-full bg-black/55 backdrop-blur-sm">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
+            </div>
+          )}
+        </Poster>
       </div>
 
-      <TitleMarquee text={heading} className="mt-1.5 w-full text-sm font-medium" />
-      {line && <p className="line-clamp-1 text-xs text-muted-foreground">{line}</p>}
+      {/* Fixed-height text block (title 20px + subtitle 16px, always reserved)
+          so every card is the same height and matches PosterSkeleton and the
+          grid's row estimate exactly — no load shift, no virtualization gaps. */}
+      <div className="mt-1.5 flex flex-col">
+        <TitleMarquee text={heading} className="h-5 w-full text-sm font-medium leading-5" />
+        <p className="line-clamp-1 h-4 text-xs leading-4 text-muted-foreground">{line}</p>
+      </div>
     </div>
   );
 }

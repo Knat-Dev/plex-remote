@@ -47,7 +47,7 @@ export function createContainer(env: Environment): Container {
   const content = new PlexContentGateway(env, contentIdentity, http, registry);
   const directory = new PlexPlayerDirectory(env, tokens, http, registry);
   const controller = new PlexPlayerController(
-    env, tokens, http, registry, relays, commandSequence,
+    env, tokens, http, registry, relays, commandSequence, contentIdentity,
   );
 
   const resolvePlayer = new ResolvePlayer(directory);

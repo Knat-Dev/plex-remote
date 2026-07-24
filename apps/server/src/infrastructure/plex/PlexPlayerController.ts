@@ -18,6 +18,7 @@ import { PlexHttpClient } from './PlexHttpClient.js';
 import { ServerRegistry } from './ServerRegistry.js';
 import { CommandSequence } from './CommandSequence.js';
 import { RelayResolver } from './RelayResolver.js';
+import type { ContentIdentity } from './ContentIdentity.js';
 import { plexHeaders, targetHeader } from './plexHeaders.js';
 import { parseTimelines, type TimelineAttributes } from './timelineXml.js';
 
@@ -55,17 +56,23 @@ export class PlexPlayerController implements PlayerController {
     private readonly registry: ServerRegistry,
     private readonly relays: RelayResolver,
     private readonly seq: CommandSequence,
+    private readonly identity: ContentIdentity,
   ) {}
 
   async cast(player: Player, request: CastRequest): Promise<void> {
     const source = await this.#location(request.serverId);
-    const token = await this.tokens.get();
+    // Build the play queue and stream with the ACTIVE USER's token so the
+    // queue item carries THEIR viewOffset — that's what lets the player resume
+    // natively (start straight at the offset), and it scrobbles progress back
+    // to the right user. The admin token would carry the owner's offset (0).
+    const token = await this.identity.tokenForServer(request.serverId);
     const playQueueId = await this.#createPlayQueue(source.base, token, request);
     this.#activeType.set(player.clientId, toTimelineType(request.kind));
 
+    const offset = Math.max(0, Math.round(request.offsetMs));
     await this.#command(player, '/player/playback/playMedia', {
       key: `/library/metadata/${request.ratingKey}`,
-      offset: Math.max(0, Math.round(request.offsetMs)),
+      offset,
       machineIdentifier: request.serverId,
       address: source.address,
       port: source.port,
@@ -74,6 +81,41 @@ export class PlexPlayerController implements PlayerController {
       containerKey: `/playQueues/${playQueueId}`,
       type: this.#typeOf(player),
     });
+
+    // Some players (Plex HTPC) ignore playMedia's `offset` and always start at
+    // 0. Seeking *does* work, so once playback is actually running we jump to
+    // the resume point. Fire-and-forget so casting returns immediately.
+    if (offset > 0) void this.#resumeSeek(player, offset);
+  }
+
+  /**
+   * Resume workaround. Plex HTPC ignores playMedia's offset and the play-queue
+   * viewOffset (verified), so it always starts at 0 — but it honours seekTo
+   * once playing. We watch for playback and seek to the resume point. Because
+   * the state read can fail when the player's timeline is served by a remote
+   * server, a guaranteed fallback seek fires at the end so resume works for
+   * ANY offset and ANY content server, even when state reads never succeed.
+   */
+  async #resumeSeek(player: Player, offsetMs: number): Promise<void> {
+    const deadline = Date.now() + 12000;
+    while (Date.now() < deadline) {
+      await delay(700);
+      let state: PlaybackState | undefined;
+      try {
+        state = await this.getState(player);
+      } catch {
+        state = undefined; // relay/timeline read failed — keep waiting
+      }
+      if (!state || state.status === 'stopped') continue;
+      // Already at/past the resume point (some players do honour it) — done.
+      if (state.timeMs >= offsetMs - 5000) return;
+      await this.seek(player, offsetMs).catch(() => undefined);
+      return;
+    }
+    // State never became readable (e.g. remote-served timeline) but playback is
+    // almost certainly running by now — seek unconditionally so resume still
+    // happens.
+    await this.seek(player, offsetMs).catch(() => undefined);
   }
 
   playback(player: Player, command: PlaybackCommand): Promise<void> {
@@ -205,4 +247,8 @@ function truthy(value: string | undefined): boolean {
 
 function isTimeout(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
