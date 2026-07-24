@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/Knat-Dev/plex-remote/compare/v1.0.1...v1.1.0) (2026-07-24)
+
+
+### Features
+
+* realtime presence, watch state, Continue Watching, hold-to-repeat ([892e472](https://github.com/Knat-Dev/plex-remote/commit/892e472cabdeac1f21ab8e958faf480fa5a1c402))
+
+
+### Bug Fixes
+
+* gap-proof synchronized marquee ([93dbc20](https://github.com/Knat-Dev/plex-remote/commit/93dbc20cf5cde61bf5318ee3ecb89aa762c67481))
+
 ## [1.0.1](https://github.com/Knat-Dev/plex-remote/compare/v1.0.0...v1.0.1) (2026-07-24)
 
 
