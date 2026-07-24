@@ -8,6 +8,7 @@ import type { Container } from '../../container.js';
 import { NotFoundError, ValidationError } from '../../shared/errors.js';
 import { PlexHttpError } from '../../infrastructure/plex/PlexHttpError.js';
 import { registerLanGuard } from './security/lanGuard.js';
+import { registerRealtime } from './realtime.js';
 import { registerPlayerRoutes } from './routes/playerRoutes.js';
 import { registerLibraryRoutes } from './routes/libraryRoutes.js';
 
@@ -22,6 +23,7 @@ export async function buildHttpServer(
   registerLanGuard(app, env);
 
   app.get('/api/health', async () => ({ status: 'ok' }));
+  await registerRealtime(app, container);
   registerPlayerRoutes(app, container);
   registerLibraryRoutes(app, container);
 

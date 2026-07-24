@@ -76,6 +76,9 @@
     -webkit-user-select: none;
     user-select: none;
     touch-action: manipulation;
+    /* No long-press callout/selection anywhere — holds are a control gesture,
+       never a context menu. */
+    -webkit-touch-callout: none;
   }
 }
 

@@ -22,6 +22,7 @@ export const castBodySchema = z.object({
   mediaType: z.enum([
     'movie', 'show', 'season', 'episode', 'artist', 'album', 'track', 'collection',
   ]),
+  offsetMs: z.coerce.number().min(0).max(24 * 3600 * 1000).default(0),
 });
 
 export const volumeBodySchema = z.object({

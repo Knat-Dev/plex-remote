@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CornerUpLeft, House } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { HoldButton } from '../../components/HoldButton.tsx';
 import { cn } from '@/lib/utils';
 import type { NavigationActionDto } from '../../api/types.ts';
 
@@ -56,14 +57,14 @@ function Arrow({
   children: React.ReactNode;
 }) {
   return (
-    <Button
+    <HoldButton
       variant="ghost"
       size="icon-lg"
       aria-label={label}
-      onClick={onClick}
+      onTrigger={onClick}
       className={cn('absolute rounded-full text-muted-foreground active:text-primary', className)}
     >
       {children}
-    </Button>
+    </HoldButton>
   );
 }

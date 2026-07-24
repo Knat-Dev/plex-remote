@@ -65,7 +65,7 @@ export class PlexPlayerController implements PlayerController {
 
     await this.#command(player, '/player/playback/playMedia', {
       key: `/library/metadata/${request.ratingKey}`,
-      offset: 0,
+      offset: Math.max(0, Math.round(request.offsetMs)),
       machineIdentifier: request.serverId,
       address: source.address,
       port: source.port,

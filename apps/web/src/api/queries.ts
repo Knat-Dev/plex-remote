@@ -27,7 +27,13 @@ const KEYS = {
 };
 
 export function usePlayers(): UseQueryResult<PlayerDto[]> {
-  return useQuery({ queryKey: KEYS.players, queryFn: () => api.get<PlayerDto[]>('/players') });
+  // Kept fresh by the realtime socket (useRealtime pushes into this cache key);
+  // the initial fetch just primes it. No client polling.
+  return useQuery({
+    queryKey: KEYS.players,
+    queryFn: () => api.get<PlayerDto[]>('/players'),
+    staleTime: Infinity,
+  });
 }
 
 export function useServers(): UseQueryResult<ServerDto[]> {
@@ -65,6 +71,15 @@ export function useEverything(enabled: boolean) {
     queryKey: ['everything'],
     queryFn: () => api.get<MediaItemDto[]>('/items'),
     enabled,
+  });
+}
+
+/** Continue Watching across every server. Kept fresh by the realtime socket
+ *  invalidation when playback stops, plus a light refetch on focus. */
+export function useOnDeck() {
+  return useQuery({
+    queryKey: ['ondeck'],
+    queryFn: () => api.get<MediaItemDto[]>('/ondeck'),
   });
 }
 
@@ -109,22 +124,20 @@ export function usePlaybackState(clientId: string | undefined) {
       return api.get<PlaybackStateDto>(`/players/${clientId}/state`);
     },
     enabled: Boolean(clientId),
-    // Keep polling when the window is unfocused: the remote often runs
-    // side-by-side with other apps and must stay truthful. After a command,
-    // the poll backs off briefly so a stale reading cannot overwrite the
-    // optimistic state while the player is still reacting.
-    refetchInterval: () => {
-      const hold = pollHold.remainingMs();
-      return hold > 0 ? hold + 100 : 1000;
-    },
-    refetchIntervalInBackground: true,
+    // Kept fresh by the realtime socket; the initial fetch primes the cache
+    // before the first pushed frame arrives. No client polling.
+    staleTime: Infinity,
   });
 }
 
 export function useCast(clientId: string | undefined) {
   return useMutation({
-    mutationFn: (vars: { serverId: string; ratingKey: string; mediaType: string }) =>
-      api.post(`/players/${clientId}/cast`, vars),
+    mutationFn: (vars: {
+      serverId: string;
+      ratingKey: string;
+      mediaType: string;
+      offsetMs: number;
+    }) => api.post(`/players/${clientId}/cast`, vars),
   });
 }
 

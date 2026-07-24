@@ -32,6 +32,11 @@ export class BrowseContent {
     return this.#fanOut((serverId) => this.content.search(serverId, query.trim()));
   }
 
+  /** "Continue Watching" across every server. */
+  async onDeckEverywhere(): Promise<Array<{ serverId: string; item: MediaItem }>> {
+    return this.#fanOut((serverId) => this.content.listOnDeck(serverId));
+  }
+
   async #fanOut(
     fetch: (serverId: string) => Promise<MediaItem[]>,
   ): Promise<Array<{ serverId: string; item: MediaItem }>> {

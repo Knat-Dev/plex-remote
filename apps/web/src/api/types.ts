@@ -29,10 +29,17 @@ export interface MediaItemDto {
   type: MediaTypeDto;
   year: number | null;
   subtitle: string | null;
+  /** Parent show title (episodes) — heads a Continue Watching card. */
+  showTitle: string | null;
   browsable: boolean;
   durationMs: number | null;
   thumbUrl: string | null;
   artUrl: string | null;
+  /** Resume position when partially watched. */
+  progressMs: number | null;
+  watched: boolean;
+  /** Remaining episodes (containers only). */
+  unwatchedCount: number | null;
 }
 
 export type MediaTypeDto =

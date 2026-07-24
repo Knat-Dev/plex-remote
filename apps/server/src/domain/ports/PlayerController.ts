@@ -21,6 +21,8 @@ export interface CastRequest {
   readonly serverId: string;
   readonly ratingKey: string;
   readonly kind: MediaKind;
+  /** Resume position; 0 starts from the beginning. */
+  readonly offsetMs: number;
 }
 
 export type PlaybackCommand =

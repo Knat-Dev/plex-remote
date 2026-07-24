@@ -1,5 +1,6 @@
 import { Pause, Play, RotateCcw, RotateCw, SkipBack, SkipForward, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { HoldButton } from '../../components/HoldButton.tsx';
 import type { PlaybackCommandDto, PlaybackStateDto } from '../../api/types.ts';
 
 interface TransportControlsProps {
@@ -20,15 +21,15 @@ export function TransportControls({ status, onCommand }: TransportControlsProps)
       >
         <SkipBack className="size-5" />
       </Button>
-      <Button
+      <HoldButton
         variant="secondary"
         size="icon-lg"
         aria-label="Back 10 seconds"
         className="rounded-full"
-        onClick={() => onCommand('stepBack')}
+        onTrigger={() => onCommand('stepBack')}
       >
         <RotateCcw className="size-5" />
-      </Button>
+      </HoldButton>
       <Button
         size="icon-lg"
         aria-label={isPlaying ? 'Pause' : 'Play'}
@@ -37,15 +38,15 @@ export function TransportControls({ status, onCommand }: TransportControlsProps)
       >
         {isPlaying ? <Pause className="size-7" /> : <Play className="size-7" />}
       </Button>
-      <Button
+      <HoldButton
         variant="secondary"
         size="icon-lg"
         aria-label="Forward 10 seconds"
         className="rounded-full"
-        onClick={() => onCommand('stepForward')}
+        onTrigger={() => onCommand('stepForward')}
       >
         <RotateCw className="size-5" />
-      </Button>
+      </HoldButton>
       <Button
         variant="secondary"
         size="icon-lg"

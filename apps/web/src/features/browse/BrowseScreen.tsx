@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
+import { getRouteApi } from '@tanstack/react-router';
 import { RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -16,25 +18,29 @@ import {
   useAllItems,
   useEverything,
   useGlobalSearch,
+  useOnDeck,
   useSectionItems,
   useSections,
   useServers,
 } from '../../api/queries.ts';
-import { getRouteApi } from '@tanstack/react-router';
 import { ALL } from '../../lib/sentinels.ts';
 
 const routeApi = getRouteApi('/');
 
+/** Continue Watching — the default landing library, filterable by server. */
+const ONDECK = 'ondeck';
+
 /** Cross-server "library" filters: sections differ per server, types don't. */
 const TYPE_FILTERS = [
-  { id: ALL, label: 'All libraries', types: undefined },
   { id: 'movies', label: 'Movies', types: ['movie'] },
   { id: 'shows', label: 'Shows', types: ['show', 'season', 'episode'] },
   { id: 'music', label: 'Music', types: ['artist', 'album', 'track'] },
 ] as const;
 
 export function BrowseScreen() {
-  const { server = ALL, lib = ALL, q = '' } = routeApi.useSearch();
+  // Default landing is Continue Watching, so opening the app lands you where
+  // you stopped. server=All by default.
+  const { server = ALL, lib = ONDECK, q = '' } = routeApi.useSearch();
   const navigate = routeApi.useNavigate();
   const { open, drawer } = useCastFlow();
 
@@ -42,41 +48,47 @@ export function BrowseScreen() {
   const { data: servers } = useServers();
   const sectionsQuery = useSections(isAllServers ? undefined : server);
 
-  const browsingAll = isAllServers && !q;
-  const browsingServerAll = !isAllServers && lib === ALL && !q;
-  const browsingSection = !isAllServers && lib !== ALL && !q;
+  // Exactly one browse mode is active (search wins).
+  const onDeck = !q && lib === ONDECK;
+  const typeFilter = !q && isAllServers && isTypeFilter(lib);
+  const everything = !q && isAllServers && lib === ALL;
+  const serverAll = !q && !isAllServers && lib === ALL;
+  const section = !q && !isAllServers && lib !== ALL && lib !== ONDECK;
 
-  const everythingQuery = useEverything(browsingAll);
-  const serverAllQuery = useAllItems(isAllServers ? undefined : server, browsingServerAll);
-  const sectionQuery = useSectionItems(
-    browsingSection ? server : undefined,
-    browsingSection ? lib : undefined,
-  );
+  const onDeckQuery = useOnDeck();
+  const everythingQuery = useEverything(everything || typeFilter);
+  const serverAllQuery = useAllItems(isAllServers ? undefined : server, serverAll);
+  const sectionQuery = useSectionItems(section ? server : undefined, section ? lib : undefined);
   const searchQuery = useGlobalSearch(q);
 
   const list = q
     ? searchQuery
-    : browsingAll
-      ? everythingQuery
-      : browsingServerAll
-        ? serverAllQuery
-        : sectionQuery;
+    : onDeck
+      ? onDeckQuery
+      : section
+        ? sectionQuery
+        : serverAll
+          ? serverAllQuery
+          : everythingQuery; // everything OR type filter (same dataset)
 
-  // In All-servers mode the library select applies a client-side type filter —
-  // section names differ per server, media types don't.
+  // Client-side narrowing on the shared datasets: On Deck by server, type
+  // filters by media type (section names differ per server, media types don't).
   const visibleItems = useMemo(() => {
-    const items = list.data ?? [];
-    if (!browsingAll || lib === ALL) return items;
-    const allowed = TYPE_FILTERS.find((f) => f.id === lib)?.types;
-    return allowed ? items.filter((i) => (allowed as readonly string[]).includes(i.type)) : items;
-  }, [list.data, browsingAll, lib]);
+    let items = list.data ?? [];
+    if (onDeck && !isAllServers) items = items.filter((i) => i.serverId === server);
+    if (typeFilter) {
+      const allowed = TYPE_FILTERS.find((f) => f.id === lib)?.types;
+      if (allowed) items = items.filter((i) => (allowed as readonly string[]).includes(i.type));
+    }
+    return items;
+  }, [list.data, onDeck, typeFilter, isAllServers, server, lib]);
 
-  // Filter changes replace history (no back-spam); a new server resets the lib.
+  // Filter changes replace history (no back-spam).
   const setSearch = (patch: Partial<{ server: string; lib: string; q: string }>) =>
     void navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
 
   const libraryOptions = isAllServers
-    ? TYPE_FILTERS.map((f) => ({ id: f.id, label: f.label }))
+    ? [{ id: ALL, label: 'All libraries' }, ...TYPE_FILTERS.map((f) => ({ id: f.id, label: f.label }))]
     : [
         { id: ALL, label: 'All libraries' },
         ...(sectionsQuery.data ?? []).map((s) => ({ id: s.key, label: s.title })),
@@ -88,10 +100,7 @@ export function BrowseScreen() {
 
       {!q && (
         <div className="grid grid-cols-2 gap-2">
-          <Select
-            value={server}
-            onValueChange={(value) => setSearch({ server: value, lib: ALL })}
-          >
+          <Select value={server} onValueChange={(value) => setSearch({ server: value, lib })}>
             <SelectTrigger className="w-full rounded-xl bg-secondary">
               <SelectValue placeholder="Server" />
             </SelectTrigger>
@@ -110,6 +119,8 @@ export function BrowseScreen() {
               <SelectValue placeholder="Library" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value={ONDECK}>Continue Watching</SelectItem>
+              <SelectSeparator />
               {libraryOptions.map((option) => (
                 <SelectItem key={option.id} value={option.id}>
                   {option.label}
@@ -137,8 +148,12 @@ export function BrowseScreen() {
           </Button>
         </div>
       ) : visibleItems.length === 0 ? (
-        <p className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-          {q ? 'No results' : 'Nothing here'}
+        <p className="flex flex-1 items-center justify-center px-6 text-center text-sm text-muted-foreground">
+          {q
+            ? 'No results'
+            : onDeck
+              ? 'Nothing in progress. Pick a library to start something.'
+              : 'Nothing here'}
         </p>
       ) : (
         <VirtualPosterGrid items={visibleItems} onOpen={open} />
@@ -147,4 +162,8 @@ export function BrowseScreen() {
       {drawer}
     </div>
   );
+}
+
+function isTypeFilter(lib: string): boolean {
+  return TYPE_FILTERS.some((f) => f.id === lib);
 }

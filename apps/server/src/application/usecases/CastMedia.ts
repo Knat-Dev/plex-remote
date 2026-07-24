@@ -7,6 +7,8 @@ export interface CastCommand {
   readonly serverId: string;
   readonly ratingKey: string;
   readonly mediaType: MediaType;
+  /** Resume position; 0 starts from the beginning. */
+  readonly offsetMs: number;
 }
 
 /** Starts playback of a library item on a chosen player. */
@@ -22,6 +24,7 @@ export class CastMedia {
       serverId: command.serverId,
       ratingKey: command.ratingKey,
       kind: kindOf(command.mediaType),
+      offsetMs: command.offsetMs,
     });
   }
 }

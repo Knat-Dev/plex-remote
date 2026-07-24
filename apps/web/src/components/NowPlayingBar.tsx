@@ -25,7 +25,15 @@ export function NowPlayingBar() {
 
   return (
     <Card className="z-30 mx-2 mb-1.5 shrink-0 gap-0 overflow-hidden rounded-xl bg-secondary/95 p-0 shadow-lg backdrop-blur">
-      <button onClick={onOpen} className="flex w-full items-center gap-3 p-2 pr-3 text-left">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onOpen}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') onOpen();
+        }}
+        className="flex w-full cursor-pointer items-center gap-3 p-2 pr-3 text-left"
+      >
         {meta?.thumbUrl ? (
           <img src={meta.thumbUrl} alt="" className="size-11 shrink-0 rounded-lg object-cover" />
         ) : (
@@ -46,7 +54,7 @@ export function NowPlayingBar() {
         >
           {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
         </Button>
-      </button>
+      </div>
       <Progress value={progress} className="h-0.5 rounded-none" />
     </Card>
   );

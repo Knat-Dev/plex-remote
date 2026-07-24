@@ -13,6 +13,10 @@ export interface MetadataDto {
   index?: number;
   parentTitle?: string;
   grandparentTitle?: string;
+  viewOffset?: number;
+  viewCount?: number;
+  leafCount?: number;
+  viewedLeafCount?: number;
 }
 
 export interface DirectoryDto {
@@ -46,6 +50,10 @@ export function toMediaItem(dto: MetadataDto): MediaItem {
     ...(dto.parentTitle !== undefined ? { parentTitle: dto.parentTitle } : {}),
     ...(dto.grandparentTitle !== undefined ? { grandparentTitle: dto.grandparentTitle } : {}),
     browsable: BROWSABLE.has(type),
+    ...(dto.viewOffset !== undefined ? { viewOffsetMs: dto.viewOffset } : {}),
+    ...(dto.viewCount !== undefined ? { viewCount: dto.viewCount } : {}),
+    ...(dto.leafCount !== undefined ? { leafCount: dto.leafCount } : {}),
+    ...(dto.viewedLeafCount !== undefined ? { viewedLeafCount: dto.viewedLeafCount } : {}),
   };
 }
 

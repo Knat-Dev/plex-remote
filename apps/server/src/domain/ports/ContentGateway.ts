@@ -15,6 +15,8 @@ export interface ContentGateway {
   /** Metadata for a single item, or undefined when it no longer exists. */
   getItem(serverId: string, ratingKey: string): Promise<MediaItem | undefined>;
   search(serverId: string, query: string): Promise<MediaItem[]>;
+  /** "Continue Watching" — in-progress items and next-up episodes. */
+  listOnDeck(serverId: string): Promise<MediaItem[]>;
   /** Raw image bytes for a thumb/art path, token applied server-side. */
   fetchImage(serverId: string, path: string): Promise<ImagePayload>;
 }

@@ -32,17 +32,38 @@ export function mediaItemDto(serverId: string, item: MediaItem) {
     type: item.type,
     year: item.year ?? null,
     subtitle: subtitleOf(item),
+    // Show a container's own poster for its On-Deck episode; the show name
+    // heads the card, the episode label is the subtitle.
+    showTitle: item.grandparentTitle ?? null,
     browsable: item.browsable,
     durationMs: item.durationMs ?? null,
     thumbUrl: imageUrl(serverId, item.thumb),
     artUrl: imageUrl(serverId, item.art),
+    // Watch state, Plex semantics: viewCount>0 ⇒ watched leaf; containers are
+    // watched when every leaf is; viewOffset ⇒ resumable position.
+    progressMs: item.viewOffsetMs ?? null,
+    watched: isWatched(item),
+    unwatchedCount: unwatchedCount(item),
   };
+}
+
+function isWatched(item: MediaItem): boolean {
+  if (item.leafCount !== undefined) {
+    return item.leafCount > 0 && (item.viewedLeafCount ?? 0) >= item.leafCount;
+  }
+  return (item.viewCount ?? 0) > 0;
+}
+
+function unwatchedCount(item: MediaItem): number | null {
+  if (item.leafCount === undefined) return null;
+  const remaining = item.leafCount - (item.viewedLeafCount ?? 0);
+  return remaining > 0 ? remaining : null;
 }
 
 function subtitleOf(item: MediaItem): string | null {
   if (item.type === 'episode') {
-    const code = item.index !== undefined ? `E${item.index}` : '';
-    return [item.grandparentTitle, code].filter(Boolean).join(' · ') || null;
+    const code = item.index !== undefined ? `Episode ${item.index}` : '';
+    return [item.parentTitle, code].filter(Boolean).join(' · ') || null;
   }
   return item.parentTitle ?? null;
 }

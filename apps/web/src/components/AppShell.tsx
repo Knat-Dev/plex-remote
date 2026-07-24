@@ -1,5 +1,6 @@
 import { Link, Outlet, useRouterState } from '@tanstack/react-router';
 import { LayoutGrid, Gamepad2, Tv } from 'lucide-react';
+import { useRealtime } from '../realtime/useRealtime.ts';
 import { AppHeader } from './AppHeader.tsx';
 import { NowPlayingBar } from './NowPlayingBar.tsx';
 
@@ -15,6 +16,7 @@ const NAV = [
  * back/forward and deep links work everywhere.
  */
 export function AppShell() {
+  useRealtime();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (

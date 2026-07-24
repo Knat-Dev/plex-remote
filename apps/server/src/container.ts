@@ -9,6 +9,8 @@ import { PlexContentGateway } from './infrastructure/plex/PlexContentGateway.js'
 import { PlexPlayerDirectory } from './infrastructure/plex/PlexPlayerDirectory.js';
 import { PlexPlayerController } from './infrastructure/plex/PlexPlayerController.js';
 import { DiscoverPlayers } from './application/usecases/DiscoverPlayers.js';
+import { PlayersWatcher } from './application/services/PlayersWatcher.js';
+import { PlaybackWatchers } from './application/services/PlaybackWatchers.js';
 import { ResolvePlayer } from './application/usecases/ResolvePlayer.js';
 import { CastMedia } from './application/usecases/CastMedia.js';
 import { ControlPlayback } from './application/usecases/ControlPlayback.js';
@@ -24,6 +26,8 @@ export interface Container {
   readonly castMedia: CastMedia;
   readonly controlPlayback: ControlPlayback;
   readonly browseContent: BrowseContent;
+  readonly playersWatcher: PlayersWatcher;
+  readonly playbackWatchers: PlaybackWatchers;
 }
 
 export function createContainer(env: Environment): Container {
@@ -43,10 +47,15 @@ export function createContainer(env: Environment): Container {
 
   const resolvePlayer = new ResolvePlayer(directory);
 
+  const discoverPlayers = new DiscoverPlayers(directory);
+  const controlPlayback = new ControlPlayback(resolvePlayer, controller);
+
   return {
-    discoverPlayers: new DiscoverPlayers(directory),
+    discoverPlayers,
     castMedia: new CastMedia(resolvePlayer, controller),
-    controlPlayback: new ControlPlayback(resolvePlayer, controller),
+    controlPlayback,
     browseContent: new BrowseContent(content),
+    playersWatcher: new PlayersWatcher(discoverPlayers),
+    playbackWatchers: new PlaybackWatchers(controlPlayback),
   };
 }
