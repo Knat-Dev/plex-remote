@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/Knat-Dev/plex-remote/compare/v1.1.0...v1.2.0) (2026-07-24)
+
+
+### Features
+
+* long-press action sheet, watch-state polish, robust mobile viewport ([f1cb651](https://github.com/Knat-Dev/plex-remote/commit/f1cb651c8a3170edb345e1348ce371549ac5e94a))
+* Plex Home user switching; show posters + taller pill in Continue Watching ([19931bc](https://github.com/Knat-Dev/plex-remote/commit/19931bcb5a433746cddd51952d8e079d9dd60de9))
+
 ## [1.1.0](https://github.com/Knat-Dev/plex-remote/compare/v1.0.1...v1.1.0) (2026-07-24)
 
 
