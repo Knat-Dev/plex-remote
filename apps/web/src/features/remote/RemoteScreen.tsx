@@ -57,6 +57,8 @@ export function RemoteScreen() {
               <TitleMarquee
                 text={art.title}
                 className="mt-0.5 text-lg font-semibold leading-tight"
+                variant="bleed"
+                fade={16}
               />
             </div>
           </div>

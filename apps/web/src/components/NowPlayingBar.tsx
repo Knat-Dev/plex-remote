@@ -32,7 +32,11 @@ export function NowPlayingBar() {
           <div className="size-11 shrink-0 rounded-lg bg-card" />
         )}
         <div className="min-w-0 flex-1">
-          <TitleMarquee text={meta?.title ?? 'Now playing'} className="text-sm font-medium" />
+          <TitleMarquee
+            text={meta?.title ?? 'Now playing'}
+            className="text-sm font-medium"
+            fadeFrom="from-secondary"
+          />
           <p className="truncate text-xs text-muted-foreground">on {player.name}</p>
         </div>
         <Button

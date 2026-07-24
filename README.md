@@ -14,7 +14,7 @@ have dropped.
 
 ```sh
 docker compose up -d --build
-# open http://plexremote.local:31400 (or http://<host-ip>:31400)
+# open http://<host-ip>:31400
 ```
 
 The Plex token is read at runtime from the mounted PMS `Preferences.xml`
@@ -81,8 +81,3 @@ Conventional commits drive everything: `fix:` → patch, `feat:` → minor,
   version bumps as PRs — merging the PR and converging is the whole update
   flow.
 
-## Local domain
-
-`plexremote.local` is published via an avahi alias (systemd unit
-`plexremote-mdns.service`) — resolvable by phones on the LAN, colliding with
-nothing in the arr-stack or NAS.
