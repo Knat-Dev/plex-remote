@@ -7,8 +7,8 @@ interface TitleMarqueeProps {
 }
 
 const EDGE = 2; // px of tolerance before a side counts as overflowing
-const SPEED = 30; // px/s scroll speed
-const PAUSE_MS = 1500; // dwell at each end
+const SPEED = 18; // px/s scroll speed — slow, Spotify-like glide
+const PAUSE_MS = 2000; // dwell at each end
 
 /**
  * Spotify-style title marquee: static (truncated) unless the text actually
