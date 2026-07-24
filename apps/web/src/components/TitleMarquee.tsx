@@ -36,8 +36,8 @@ export function TitleMarquee({ text, className }: TitleMarqueeProps) {
       animation?.cancel();
       animation = undefined;
       cancelAnimationFrame(raf);
-      outer.style.setProperty('--fade-l', '0');
-      outer.style.setProperty('--fade-r', '0');
+      outer.style.setProperty('--fade-l-w', '0px');
+      outer.style.setProperty('--fade-r-w', '0px');
       inner.style.transform = '';
     };
 
@@ -65,13 +65,13 @@ export function TitleMarquee({ text, className }: TitleMarqueeProps) {
       const tick = () => {
         const matrix = new DOMMatrixReadOnly(getComputedStyle(inner).transform);
         const tx = -matrix.m41; // 0 .. distance
-        // Fades ramp proportionally with the travel itself: the left fade
-        // grows in over the first FADE_RAMP px as the text departs, the right
-        // fade dissolves over the last FADE_RAMP px as the tail arrives —
-        // continuous and in lockstep with the motion, never a pop.
-        const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-        outer.style.setProperty('--fade-l', clamp01(tx / FADE_RAMP).toFixed(3));
-        outer.style.setProperty('--fade-r', clamp01((distance - tx) / FADE_RAMP).toFixed(3));
+        // The fade WIDTH is bound to the text edge itself: n px of text past
+        // an edge ⇒ exactly n px of fade there (capped at FADE_RAMP). The
+        // gradient grows/shrinks in lockstep with the glyphs crossing it —
+        // nothing ever switches, so nothing can pop.
+        const clamp = (v: number) => Math.min(FADE_RAMP, Math.max(0, v));
+        outer.style.setProperty('--fade-l-w', `${clamp(tx).toFixed(1)}px`);
+        outer.style.setProperty('--fade-r-w', `${clamp(distance - tx).toFixed(1)}px`);
         raf = requestAnimationFrame(tick);
       };
       raf = requestAnimationFrame(tick);
@@ -86,11 +86,11 @@ export function TitleMarquee({ text, className }: TitleMarqueeProps) {
     };
   }, [text]);
 
-  // Mask-based fades work over any backdrop (solid, blurred artwork, …):
-  // an edge is transparent only while its --fade-* var says text continues
-  // past it. Vars are set imperatively in the rAF loop above.
+  // Mask-based fades work over any backdrop (solid, blurred artwork, …).
+  // The gradient stops are the fade WIDTH variables the rAF loop drives, so
+  // each fade's extent tracks the text edge exactly; width 0 = no fade.
   const mask =
-    'linear-gradient(to right, rgba(0,0,0,calc(1 - var(--fade-l, 0))) 0, #000 1.5rem, #000 calc(100% - 1.5rem), rgba(0,0,0,calc(1 - var(--fade-r, 0))) 100%)';
+    'linear-gradient(to right, transparent 0, #000 var(--fade-l-w, 0px), #000 calc(100% - var(--fade-r-w, 0px)), transparent 100%)';
 
   return (
     <div
