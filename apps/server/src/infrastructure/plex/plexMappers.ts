@@ -6,6 +6,7 @@ export interface MetadataDto {
   title?: string;
   type?: string;
   thumb?: string;
+  grandparentThumb?: string;
   art?: string;
   year?: number;
   summary?: string;
@@ -43,6 +44,7 @@ export function toMediaItem(dto: MetadataDto): MediaItem {
     title: dto.title ?? 'Untitled',
     type,
     ...(dto.thumb !== undefined ? { thumb: dto.thumb } : {}),
+    ...(dto.grandparentThumb !== undefined ? { showThumb: dto.grandparentThumb } : {}),
     ...(dto.art !== undefined ? { art: dto.art } : {}),
     ...(dto.year !== undefined ? { year: dto.year } : {}),
     ...(dto.summary !== undefined ? { summary: dto.summary } : {}),

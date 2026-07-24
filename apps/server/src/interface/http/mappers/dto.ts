@@ -37,7 +37,7 @@ export function mediaItemDto(serverId: string, item: MediaItem) {
     showTitle: item.grandparentTitle ?? null,
     browsable: item.browsable,
     durationMs: item.durationMs ?? null,
-    thumbUrl: imageUrl(serverId, item.thumb),
+    thumbUrl: imageUrl(serverId, item.showThumb ?? item.thumb),
     artUrl: imageUrl(serverId, item.art),
     // Watch state, Plex semantics: viewCount>0 ⇒ watched leaf; containers are
     // watched when every leaf is; viewOffset ⇒ resumable position.

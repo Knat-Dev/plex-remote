@@ -6,6 +6,8 @@ import { ServerRegistry } from './infrastructure/plex/ServerRegistry.js';
 import { RelayResolver } from './infrastructure/plex/RelayResolver.js';
 import { CommandSequence } from './infrastructure/plex/CommandSequence.js';
 import { PlexContentGateway } from './infrastructure/plex/PlexContentGateway.js';
+import { HomeUserService } from './infrastructure/plex/HomeUserService.js';
+import { ContentIdentity } from './infrastructure/plex/ContentIdentity.js';
 import { PlexPlayerDirectory } from './infrastructure/plex/PlexPlayerDirectory.js';
 import { PlexPlayerController } from './infrastructure/plex/PlexPlayerController.js';
 import { DiscoverPlayers } from './application/usecases/DiscoverPlayers.js';
@@ -28,6 +30,7 @@ export interface Container {
   readonly browseContent: BrowseContent;
   readonly playersWatcher: PlayersWatcher;
   readonly playbackWatchers: PlaybackWatchers;
+  readonly contentIdentity: ContentIdentity;
 }
 
 export function createContainer(env: Environment): Container {
@@ -39,7 +42,9 @@ export function createContainer(env: Environment): Container {
   const commandSequence = new CommandSequence();
   const relays = new RelayResolver(env, tokens, http, registry, commandSequence);
 
-  const content = new PlexContentGateway(env, tokens, http, registry);
+  const homeUsers = new HomeUserService(env, tokens, http);
+  const contentIdentity = new ContentIdentity(tokens, homeUsers);
+  const content = new PlexContentGateway(env, contentIdentity, http, registry);
   const directory = new PlexPlayerDirectory(env, tokens, http, registry);
   const controller = new PlexPlayerController(
     env, tokens, http, registry, relays, commandSequence,
@@ -57,5 +62,6 @@ export function createContainer(env: Environment): Container {
     browseContent: new BrowseContent(content),
     playersWatcher: new PlayersWatcher(discoverPlayers),
     playbackWatchers: new PlaybackWatchers(controlPlayback),
+    contentIdentity,
   };
 }

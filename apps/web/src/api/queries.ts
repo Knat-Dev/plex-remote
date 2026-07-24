@@ -130,6 +130,28 @@ export function usePlaybackState(clientId: string | undefined) {
   });
 }
 
+export interface HomeUsersDto {
+  activeUuid: string | undefined;
+  users: Array<{ uuid: string; title: string; admin: boolean; thumb: string | null }>;
+}
+
+export function useUsers() {
+  return useQuery({ queryKey: ['users'], queryFn: () => api.get<HomeUsersDto>('/users') });
+}
+
+/** Switch the active Plex Home user; refreshes all content (per-user state). */
+export function useSetActiveUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (uuid: string) => api.post('/users/active', { uuid }),
+    onSuccess: () => {
+      for (const key of ['users', 'ondeck', 'everything', 'all-items', 'items', 'children', 'sections', 'servers']) {
+        void qc.invalidateQueries({ queryKey: [key] });
+      }
+    },
+  });
+}
+
 /** Mark an item watched/unwatched; refreshes Continue Watching + content. */
 export function useSetWatched() {
   const qc = useQueryClient();

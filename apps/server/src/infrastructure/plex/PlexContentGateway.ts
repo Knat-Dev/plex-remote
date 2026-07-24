@@ -1,5 +1,5 @@
 import type { Environment } from '../../config/environment.js';
-import type { TokenProvider } from '../../config/TokenProvider.js';
+import type { ContentIdentity } from './ContentIdentity.js';
 import type { ContentGateway, ImagePayload } from '../../domain/ports/ContentGateway.js';
 import type { LibrarySection, MediaItem } from '../../domain/entities/MediaItem.js';
 import type { Server } from '../../domain/entities/Server.js';
@@ -21,7 +21,7 @@ interface Container<T> {
 export class PlexContentGateway implements ContentGateway {
   constructor(
     private readonly env: Environment,
-    private readonly tokens: TokenProvider,
+    private readonly identity: ContentIdentity,
     private readonly http: PlexHttpClient,
     private readonly registry: ServerRegistry,
   ) {}
@@ -78,7 +78,7 @@ export class PlexContentGateway implements ContentGateway {
 
   async setWatched(serverId: string, ratingKey: string, watched: boolean): Promise<void> {
     const base = await this.registry.baseUrl(serverId);
-    const token = await this.tokens.get();
+    const token = await this.identity.tokenForServer(serverId);
     const path = watched ? '/:/scrobble' : '/:/unscrobble';
     await this.http.raw(`${base}${path}`, {
       headers: plexHeaders(this.env, token),
@@ -99,7 +99,7 @@ export class PlexContentGateway implements ContentGateway {
 
   async fetchImage(serverId: string, path: string): Promise<ImagePayload> {
     const base = await this.registry.baseUrl(serverId);
-    const token = await this.tokens.get();
+    const token = await this.identity.tokenForServer(serverId);
     const res = await this.http.raw(`${base}${path}`, {
       query: { 'X-Plex-Token': token },
       timeoutMs: this.env.requestTimeoutMs,
@@ -115,7 +115,7 @@ export class PlexContentGateway implements ContentGateway {
     query?: Record<string, string | number>,
   ): Promise<T> {
     const base = await this.registry.baseUrl(serverId);
-    const token = await this.tokens.get();
+    const token = await this.identity.tokenForServer(serverId);
     return this.http.json<T>(`${base}${path}`, {
       headers: plexHeaders(this.env, token),
       timeoutMs: this.env.requestTimeoutMs,

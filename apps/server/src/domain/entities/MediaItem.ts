@@ -18,6 +18,8 @@ export interface MediaItem {
   readonly title: string;
   readonly type: MediaType;
   readonly thumb?: string;
+  /** Show poster for episodes (grandparentThumb). */
+  readonly showThumb?: string;
   readonly art?: string;
   readonly year?: number;
   readonly summary?: string;

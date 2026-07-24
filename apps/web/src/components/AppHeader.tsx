@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { Tv } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { UserSwitcher } from './UserSwitcher.tsx';
 import { useActivePlayer } from '../hooks/useActivePlayer.ts';
 import { cn } from '@/lib/utils';
 
@@ -15,18 +16,21 @@ export function AppHeader() {
         <span className="text-lg font-bold tracking-tight">Plex</span>
         <span className="text-lg font-bold tracking-tight text-primary">Remote</span>
       </Link>
-      <Button variant="secondary" size="sm" asChild className="rounded-full">
-        <Link to="/players">
-          <span className={cn('relative flex size-2', !playing && 'opacity-40')}>
-            {playing && (
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-            )}
-            <span className="relative inline-flex size-2 rounded-full bg-primary" />
-          </span>
-          <Tv className="size-4 text-muted-foreground" />
-          <span className="max-w-28 truncate">{player?.name ?? 'No player'}</span>
-        </Link>
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button variant="secondary" size="sm" asChild className="rounded-full">
+          <Link to="/players">
+            <span className={cn('relative flex size-2', !playing && 'opacity-40')}>
+              {playing && (
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+              )}
+              <span className="relative inline-flex size-2 rounded-full bg-primary" />
+            </span>
+            <Tv className="size-4 text-muted-foreground" />
+            <span className="max-w-24 truncate">{player?.name ?? 'No player'}</span>
+          </Link>
+        </Button>
+        <UserSwitcher />
+      </div>
     </header>
   );
 }

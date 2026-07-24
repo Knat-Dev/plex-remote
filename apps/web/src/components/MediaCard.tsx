@@ -77,7 +77,7 @@ export function MediaCard({ item, onOpen, onLongPress }: MediaCardProps) {
 
         {/* Inset rounded progress pill with a track, Plex-style. */}
         {progress > 0 && (
-          <div className="absolute inset-x-2 bottom-2 h-1 overflow-hidden rounded-full bg-black/55 backdrop-blur-sm">
+          <div className="absolute inset-x-2 bottom-2 h-1.5 overflow-hidden rounded-full bg-black/55 backdrop-blur-sm">
             <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
           </div>
         )}

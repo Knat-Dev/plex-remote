@@ -11,6 +11,7 @@ import { registerLanGuard } from './security/lanGuard.js';
 import { registerRealtime } from './realtime.js';
 import { registerPlayerRoutes } from './routes/playerRoutes.js';
 import { registerLibraryRoutes } from './routes/libraryRoutes.js';
+import { registerUserRoutes } from './routes/userRoutes.js';
 
 /** Builds the Fastify app: routes, CORS, error mapping and optional web UI. */
 export async function buildHttpServer(
@@ -26,6 +27,7 @@ export async function buildHttpServer(
   await registerRealtime(app, container);
   registerPlayerRoutes(app, container);
   registerLibraryRoutes(app, container);
+  registerUserRoutes(app, container);
 
   await registerWebUi(app, env);
   registerErrorHandler(app);
