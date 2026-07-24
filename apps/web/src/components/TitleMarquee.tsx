@@ -4,22 +4,23 @@ import { cn } from '@/lib/utils';
 interface TitleMarqueeProps {
   text: string;
   className?: string;
+  /** Fade zone width in px. Bleeds this far into surrounding space mid-scroll. */
+  fade?: number;
 }
 
-const EDGE = 2; // px of tolerance before a side counts as overflowing
+const EDGE = 4; // px of overflow tolerance before scrolling kicks in
 const SPEED = 18; // px/s scroll speed — slow, Spotify-like glide
 const PAUSE_MS = 2000; // dwell at each end
-const FADE_RAMP = 24; // px of travel over which an edge fade ramps in/out
 
 /**
- * Spotify-style title marquee: static (truncated) unless the text actually
- * overflows; when it does, it slowly scrolls end-to-end and back with dwell
- * pauses, and each edge shows a fade ONLY while more text continues past it.
- * Driven by the Web Animations API with the fade opacities updated outside
- * React (CSS variables via rAF) so there is zero re-render churn. Honors
- * prefers-reduced-motion by staying static.
+ * Spotify-style title marquee. The mask gradient is STATIC — the text is
+ * inset by the fade width (padding) while the box extends beyond its layout
+ * bounds by the same amount (negative margin), so the fade zones sit over
+ * empty strips at rest and the glyphs dissolve exactly as they travel through
+ * them during the scroll. Only the text moves; the fades cannot pop because
+ * they never change. Honors prefers-reduced-motion by staying static.
  */
-export function TitleMarquee({ text, className }: TitleMarqueeProps) {
+export function TitleMarquee({ text, className, fade = 12 }: TitleMarqueeProps) {
   const outerRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLSpanElement>(null);
 
@@ -30,21 +31,17 @@ export function TitleMarquee({ text, className }: TitleMarqueeProps) {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     let animation: Animation | undefined;
-    let raf = 0;
 
     const stop = () => {
       animation?.cancel();
       animation = undefined;
-      cancelAnimationFrame(raf);
-      outer.style.setProperty('--fade-l-w', '0px');
-      outer.style.setProperty('--fade-r-w', '0px');
-      inner.style.transform = '';
     };
 
     const start = () => {
       stop();
-      const distance = inner.scrollWidth - outer.clientWidth;
-      if (distance <= EDGE * 2) return;
+      // Usable text area = content box (outer minus the two fade paddings).
+      const distance = inner.scrollWidth - (outer.clientWidth - 2 * fade);
+      if (distance <= EDGE) return;
 
       const travelMs = (distance / SPEED) * 1000;
       const total = travelMs * 2 + PAUSE_MS * 2;
@@ -61,20 +58,6 @@ export function TitleMarquee({ text, className }: TitleMarqueeProps) {
         ],
         { duration: total, iterations: Infinity, easing: 'linear' },
       );
-
-      const tick = () => {
-        const matrix = new DOMMatrixReadOnly(getComputedStyle(inner).transform);
-        const tx = -matrix.m41; // 0 .. distance
-        // The fade WIDTH is bound to the text edge itself: n px of text past
-        // an edge ⇒ exactly n px of fade there (capped at FADE_RAMP). The
-        // gradient grows/shrinks in lockstep with the glyphs crossing it —
-        // nothing ever switches, so nothing can pop.
-        const clamp = (v: number) => Math.min(FADE_RAMP, Math.max(0, v));
-        outer.style.setProperty('--fade-l-w', `${clamp(tx).toFixed(1)}px`);
-        outer.style.setProperty('--fade-r-w', `${clamp(distance - tx).toFixed(1)}px`);
-        raf = requestAnimationFrame(tick);
-      };
-      raf = requestAnimationFrame(tick);
     };
 
     start();
@@ -84,19 +67,23 @@ export function TitleMarquee({ text, className }: TitleMarqueeProps) {
       observer.disconnect();
       stop();
     };
-  }, [text]);
+  }, [text, fade]);
 
-  // Mask-based fades work over any backdrop (solid, blurred artwork, …).
-  // The gradient stops are the fade WIDTH variables the rAF loop drives, so
-  // each fade's extent tracks the text edge exactly; width 0 = no fade.
-  const mask =
-    'linear-gradient(to right, transparent 0, #000 var(--fade-l-w, 0px), #000 calc(100% - var(--fade-r-w, 0px)), transparent 100%)';
+  // Static mask: transparent over the two padding strips, opaque between.
+  // The negative margin lets those strips live OUTSIDE the layout bounds, so
+  // the resting text keeps its full width and normal alignment.
+  const mask = `linear-gradient(to right, transparent 0, #000 ${fade}px, #000 calc(100% - ${fade}px), transparent 100%)`;
 
   return (
     <div
       ref={outerRef}
-      className={cn('relative overflow-hidden whitespace-nowrap', className)}
-      style={{ maskImage: mask, WebkitMaskImage: mask }}
+      className={cn('overflow-hidden whitespace-nowrap', className)}
+      style={{
+        maskImage: mask,
+        WebkitMaskImage: mask,
+        paddingInline: fade,
+        marginInline: -fade,
+      }}
     >
       <span ref={innerRef} className="inline-block will-change-transform">
         {text}
