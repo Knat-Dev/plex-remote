@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import { Tv } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -6,11 +7,9 @@ import { cn } from '@/lib/utils';
 import { usePlayers } from '../../api/queries.ts';
 import { usePlayerStore } from '../../state/usePlayerStore.ts';
 
-interface PlayersScreenProps {
-  onSelected: () => void;
-}
-
-export function PlayersScreen({ onSelected }: PlayersScreenProps) {
+export function PlayersScreen() {
+  const navigate = useNavigate();
+  const onSelected = () => void navigate({ to: '/remote' });
   const { data: players, isLoading } = usePlayers();
   const { activeClientId, setActivePlayer } = usePlayerStore();
 

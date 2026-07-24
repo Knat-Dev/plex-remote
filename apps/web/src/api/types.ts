@@ -42,6 +42,8 @@ export type MediaTypeDto =
 export interface PlaybackStateDto {
   status: 'playing' | 'paused' | 'buffering' | 'stopped';
   ratingKey?: string;
+  /** Server that owns the playing content (for metadata lookups). */
+  contentServerId?: string;
   title?: string;
   timeMs: number;
   durationMs: number;

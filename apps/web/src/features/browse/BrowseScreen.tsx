@@ -1,193 +1,150 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft } from 'lucide-react';
-import { toast } from 'sonner';
+import { useMemo } from 'react';
+import { RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ChipRow } from '../../components/ChipRow.tsx';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { VirtualPosterGrid } from '../../components/VirtualPosterGrid.tsx';
 import { PosterSkeleton } from '../../components/PosterSkeleton.tsx';
-import { CastConfirmDrawer } from './CastConfirmDrawer.tsx';
 import { SearchBar } from './SearchBar.tsx';
+import { useCastFlow } from './useCastFlow.tsx';
 import {
   useAllItems,
-  useCast,
-  useChildren,
   useEverything,
   useGlobalSearch,
-  usePlaybackState,
-  usePlayers,
   useSectionItems,
   useSections,
   useServers,
 } from '../../api/queries.ts';
-import { usePlayerStore } from '../../state/usePlayerStore.ts';
-import type { MediaItemDto } from '../../api/types.ts';
+import { getRouteApi } from '@tanstack/react-router';
+import { ALL } from '../../lib/sentinels.ts';
 
-/** Sentinel ids for the aggregate views. */
-const ALL_SERVERS = '__all__';
-const ALL_SECTIONS = '__all__';
+const routeApi = getRouteApi('/');
 
-interface Frame {
-  ratingKey: string;
-  title: string;
-  serverId: string;
-}
+/** Cross-server "library" filters: sections differ per server, types don't. */
+const TYPE_FILTERS = [
+  { id: ALL, label: 'All libraries', types: undefined },
+  { id: 'movies', label: 'Movies', types: ['movie'] },
+  { id: 'shows', label: 'Shows', types: ['show', 'season', 'episode'] },
+  { id: 'music', label: 'Music', types: ['artist', 'album', 'track'] },
+] as const;
 
-interface BrowseScreenProps {
-  onCasted: () => void;
-}
+export function BrowseScreen() {
+  const { server = ALL, lib = ALL, q = '' } = routeApi.useSearch();
+  const navigate = routeApi.useNavigate();
+  const { open, drawer } = useCastFlow();
 
-export function BrowseScreen({ onCasted }: BrowseScreenProps) {
+  const isAllServers = server === ALL;
   const { data: servers } = useServers();
-  const { activeServerId, setActiveServer, activeClientId, setNowPlaying } = usePlayerStore();
-  const { data: players } = usePlayers();
-  // Default view: everything from every server.
-  const serverId = activeServerId ?? ALL_SERVERS;
-  const isAllServers = serverId === ALL_SERVERS;
+  const sectionsQuery = useSections(isAllServers ? undefined : server);
 
-  const { data: sections } = useSections(isAllServers ? undefined : serverId);
-  const [sectionKey, setSectionKey] = useState<string>();
-  const [stack, setStack] = useState<Frame[]>([]);
-  const [query, setQuery] = useState('');
-  const [pendingCast, setPendingCast] = useState<MediaItemDto>();
+  const browsingAll = isAllServers && !q;
+  const browsingServerAll = !isAllServers && lib === ALL && !q;
+  const browsingSection = !isAllServers && lib !== ALL && !q;
 
-  const activeSection = sectionKey ?? ALL_SECTIONS;
-  useEffect(() => setStack([]), [activeSection, serverId]);
-
-  const top = stack[stack.length - 1];
-  const browsingAll = !top && isAllServers;
-  const browsingServerAll = !top && !isAllServers && activeSection === ALL_SECTIONS;
-
-  const everythingQuery = useEverything(browsingAll && !query);
+  const everythingQuery = useEverything(browsingAll);
+  const serverAllQuery = useAllItems(isAllServers ? undefined : server, browsingServerAll);
   const sectionQuery = useSectionItems(
-    !top && !isAllServers && activeSection !== ALL_SECTIONS ? serverId : undefined,
-    activeSection !== ALL_SECTIONS ? activeSection : undefined,
+    browsingSection ? server : undefined,
+    browsingSection ? lib : undefined,
   );
-  const serverAllQuery = useAllItems(
-    isAllServers ? undefined : serverId,
-    browsingServerAll && !query,
-  );
-  const childrenQuery = useChildren(top?.serverId, top?.ratingKey);
-  const searchQuery = useGlobalSearch(query);
-  const { data: playbackState } = usePlaybackState(activeClientId);
+  const searchQuery = useGlobalSearch(q);
 
-  const cast = useCast(activeClientId);
-  const activePlayerName = players?.find((p) => p.clientId === activeClientId)?.name;
-
-  const list = query
+  const list = q
     ? searchQuery
-    : top
-      ? childrenQuery
-      : browsingAll
-        ? everythingQuery
-        : browsingServerAll
-          ? serverAllQuery
-          : sectionQuery;
+    : browsingAll
+      ? everythingQuery
+      : browsingServerAll
+        ? serverAllQuery
+        : sectionQuery;
 
-  const doCast = (item: MediaItemDto) => {
-    cast.mutate(
-      { serverId: item.serverId, ratingKey: item.ratingKey, mediaType: item.type },
-      {
-        onSuccess: () => {
-          setNowPlaying({
-            ratingKey: item.ratingKey,
-            title: item.title,
-            thumbUrl: item.thumbUrl,
-            artUrl: item.artUrl,
-          });
-          toast(`Casting “${item.title}” to ${activePlayerName ?? 'player'}`);
-          onCasted();
-        },
-        onError: (e) => toast.error(e instanceof Error ? e.message : 'Cast failed'),
-      },
-    );
-  };
+  // In All-servers mode the library select applies a client-side type filter —
+  // section names differ per server, media types don't.
+  const visibleItems = useMemo(() => {
+    const items = list.data ?? [];
+    if (!browsingAll || lib === ALL) return items;
+    const allowed = TYPE_FILTERS.find((f) => f.id === lib)?.types;
+    return allowed ? items.filter((i) => (allowed as readonly string[]).includes(i.type)) : items;
+  }, [list.data, browsingAll, lib]);
 
-  const open = (item: MediaItemDto) => {
-    if (item.browsable) {
-      setStack((prev) => [
-        ...prev,
-        { ratingKey: item.ratingKey, title: item.title, serverId: item.serverId },
-      ]);
-      return;
-    }
-    if (!activeClientId) {
-      toast.error('Pick a player first');
-      return;
-    }
-    // Mid-watch protection: replacing active playback needs explicit consent.
-    const busy = playbackState && playbackState.status !== 'stopped';
-    if (busy && playbackState.ratingKey !== item.ratingKey) {
-      setPendingCast(item);
-      return;
-    }
-    doCast(item);
-  };
+  // Filter changes replace history (no back-spam); a new server resets the lib.
+  const setSearch = (patch: Partial<{ server: string; lib: string; q: string }>) =>
+    void navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
 
-  const serverChips = useMemo(
-    () => [
-      { id: ALL_SERVERS, label: 'All' },
-      ...(servers ?? []).map((s) => ({ id: s.id, label: s.name })),
-    ],
-    [servers],
-  );
-  const sectionChips = useMemo(
-    () => [
-      { id: ALL_SECTIONS, label: 'All' },
-      ...(sections ?? []).map((s) => ({ id: s.key, label: s.title })),
-    ],
-    [sections],
-  );
+  const libraryOptions = isAllServers
+    ? TYPE_FILTERS.map((f) => ({ id: f.id, label: f.label }))
+    : [
+        { id: ALL, label: 'All libraries' },
+        ...(sectionsQuery.data ?? []).map((s) => ({ id: s.key, label: s.title })),
+      ];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 px-4">
-      <SearchBar value={query} onChange={setQuery} />
+      <SearchBar value={q} onChange={(value) => setSearch({ q: value })} />
 
-      {!query && (
-        <ChipRow
-          chips={serverChips}
-          activeId={serverId}
-          onSelect={(id) => {
-            setActiveServer(id);
-            setSectionKey(undefined);
-          }}
-        />
-      )}
+      {!q && (
+        <div className="grid grid-cols-2 gap-2">
+          <Select
+            value={server}
+            onValueChange={(value) => setSearch({ server: value, lib: ALL })}
+          >
+            <SelectTrigger className="w-full rounded-xl bg-secondary">
+              <SelectValue placeholder="Server" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All servers</SelectItem>
+              {(servers ?? []).map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-      {!query && !top && !isAllServers && (
-        <ChipRow chips={sectionChips} activeId={activeSection} onSelect={setSectionKey} />
-      )}
-
-      {!query && top && (
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setStack((prev) => prev.slice(0, -1))}
-          className="self-start rounded-full"
-        >
-          <ChevronLeft className="size-4" />
-          {top.title}
-        </Button>
+          <Select value={lib} onValueChange={(value) => setSearch({ lib: value })}>
+            <SelectTrigger className="w-full rounded-xl bg-secondary">
+              <SelectValue placeholder="Library" />
+            </SelectTrigger>
+            <SelectContent>
+              {libraryOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       )}
 
       {list.isLoading ? (
         <PosterSkeleton />
-      ) : !list.data || list.data.length === 0 ? (
+      ) : list.isError || sectionsQuery.isError ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3">
+          <p className="text-sm text-muted-foreground">Couldn’t reach the server.</p>
+          <Button
+            variant="secondary"
+            className="rounded-full"
+            onClick={() => {
+              void list.refetch();
+              void sectionsQuery.refetch();
+            }}
+          >
+            <RotateCw className="size-4" /> Retry
+          </Button>
+        </div>
+      ) : visibleItems.length === 0 ? (
         <p className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-          {query ? 'No results' : 'Nothing here'}
+          {q ? 'No results' : 'Nothing here'}
         </p>
       ) : (
-        <VirtualPosterGrid items={list.data} onOpen={open} />
+        <VirtualPosterGrid items={visibleItems} onOpen={open} />
       )}
 
-      <CastConfirmDrawer
-        item={pendingCast}
-        playerName={activePlayerName}
-        onConfirm={(item) => {
-          setPendingCast(undefined);
-          doCast(item);
-        }}
-        onClose={() => setPendingCast(undefined)}
-      />
+      {drawer}
     </div>
   );
 }

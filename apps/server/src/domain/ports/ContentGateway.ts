@@ -12,6 +12,8 @@ export interface ContentGateway {
   /** Every item across all of the server's library sections. */
   listAllItems(serverId: string): Promise<MediaItem[]>;
   listChildren(serverId: string, ratingKey: string): Promise<MediaItem[]>;
+  /** Metadata for a single item, or undefined when it no longer exists. */
+  getItem(serverId: string, ratingKey: string): Promise<MediaItem | undefined>;
   search(serverId: string, query: string): Promise<MediaItem[]>;
   /** Raw image bytes for a thumb/art path, token applied server-side. */
   fetchImage(serverId: string, path: string): Promise<ImagePayload>;

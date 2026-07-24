@@ -11,6 +11,8 @@ export interface TimelineAttributes {
   time: number | undefined;
   duration: number | undefined;
   ratingKey: string | undefined;
+  /** Machine id of the server the playing content belongs to. */
+  machineIdentifier: string | undefined;
   volume: number | undefined;
   muted: string | undefined;
   repeat: string | undefined;
@@ -41,6 +43,7 @@ export function parseTimelines(xml: string): TimelineAttributes[] {
     time: num(el.time),
     duration: num(el.duration),
     ratingKey: el.ratingKey,
+    machineIdentifier: el.machineIdentifier,
     volume: num(el.volume),
     muted: el.muted,
     repeat: el.repeat,

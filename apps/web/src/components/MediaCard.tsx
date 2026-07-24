@@ -1,4 +1,5 @@
 import { ChevronRight } from 'lucide-react';
+import { TitleMarquee } from './TitleMarquee.tsx';
 import type { MediaItemDto } from '../api/types.ts';
 
 interface MediaCardProps {
@@ -27,7 +28,7 @@ export function MediaCard({ item, onOpen }: MediaCardProps) {
           </span>
         )}
       </div>
-      <p className="mt-1.5 line-clamp-1 text-sm font-medium">{item.title}</p>
+      <TitleMarquee text={item.title} className="mt-1.5 w-full text-sm font-medium" />
       {(item.subtitle || item.year) && (
         <p className="line-clamp-1 text-xs text-muted-foreground">{item.subtitle ?? item.year}</p>
       )}

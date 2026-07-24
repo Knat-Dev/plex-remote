@@ -177,6 +177,9 @@ function toPlaybackState(timelines: TimelineAttributes[]): PlaybackState {
     status: normaliseStatus(active.state),
     ...(isTimelineType(active.type) ? { mediaType: active.type } : {}),
     ...(active.ratingKey !== undefined ? { ratingKey: active.ratingKey } : {}),
+    ...(active.machineIdentifier !== undefined
+      ? { contentServerId: active.machineIdentifier }
+      : {}),
     timeMs: active.time ?? 0,
     durationMs: active.duration ?? 0,
     ...(active.volume !== undefined ? { volume: active.volume } : {}),

@@ -62,6 +62,15 @@ export class PlexContentGateway implements ContentGateway {
     return (data.MediaContainer?.Metadata ?? []).map(toMediaItem);
   }
 
+  async getItem(serverId: string, ratingKey: string): Promise<MediaItem | undefined> {
+    const data = await this.#get<Container<MetadataDto>>(
+      serverId,
+      `/library/metadata/${encodeURIComponent(ratingKey)}`,
+    );
+    const dto = data.MediaContainer?.Metadata?.[0];
+    return dto ? toMediaItem(dto) : undefined;
+  }
+
   async search(serverId: string, query: string): Promise<MediaItem[]> {
     const data = await this.#get<Container<MetadataDto>>(serverId, '/hubs/search', {
       query,

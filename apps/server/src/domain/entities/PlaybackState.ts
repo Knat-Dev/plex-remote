@@ -10,6 +10,8 @@ export interface PlaybackState {
   readonly status: PlaybackStatus;
   /** Which timeline is active — required on transport commands or players ignore them. */
   readonly mediaType?: TimelineType;
+  /** Server that owns the playing content (for metadata lookups). */
+  readonly contentServerId?: string;
   readonly ratingKey?: string;
   readonly title?: string;
   readonly subtitle?: string;

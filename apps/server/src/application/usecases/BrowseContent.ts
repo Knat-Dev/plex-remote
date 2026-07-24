@@ -54,6 +54,10 @@ export class BrowseContent {
     return this.content.listChildren(serverId, ratingKey);
   }
 
+  item(serverId: string, ratingKey: string): Promise<MediaItem | undefined> {
+    return this.content.getItem(serverId, ratingKey);
+  }
+
   search(serverId: string, query: string): Promise<MediaItem[]> {
     return this.content.search(serverId, query.trim());
   }

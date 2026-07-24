@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { Container } from '../../../container.js';
+import { NotFoundError } from '../../../shared/errors.js';
 import { mediaItemDto, serverDto } from '../mappers/dto.js';
 import { imageQuerySchema, searchQuerySchema } from '../schemas.js';
 
@@ -38,6 +39,15 @@ export function registerLibraryRoutes(app: FastifyInstance, c: Container): void 
         req.params.sectionKey,
       );
       return items.map((item) => mediaItemDto(req.params.serverId, item));
+    },
+  );
+
+  app.get<{ Params: ServerParams & { ratingKey: string } }>(
+    '/api/servers/:serverId/items/:ratingKey',
+    async (req) => {
+      const item = await c.browseContent.item(req.params.serverId, req.params.ratingKey);
+      if (!item) throw new NotFoundError(`Item ${req.params.ratingKey}`);
+      return mediaItemDto(req.params.serverId, item);
     },
   );
 

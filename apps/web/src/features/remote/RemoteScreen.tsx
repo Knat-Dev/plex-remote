@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TitleMarquee } from '../../components/TitleMarquee.tsx';
 import { useActivePlayer } from '../../hooks/useActivePlayer.ts';
-import { usePlayerStore } from '../../state/usePlayerStore.ts';
+import { useNowPlayingMeta } from '../../hooks/useNowPlayingMeta.ts';
 import { Scrubber } from './Scrubber.tsx';
 import { StopButton, TransportControls } from './TransportControls.tsx';
 import { VolumeSlider } from './VolumeSlider.tsx';
@@ -10,7 +11,7 @@ import { DPad } from './DPad.tsx';
 
 export function RemoteScreen() {
   const { player, state, commands, isReady } = useActivePlayer();
-  const { nowPlaying } = usePlayerStore();
+  const nowPlaying = useNowPlayingMeta(state);
 
   const [volume, setVolume] = useState(100);
   useEffect(() => {
@@ -49,11 +50,14 @@ export function RemoteScreen() {
                 className="h-24 w-16 shrink-0 rounded-lg object-cover shadow-lg"
               />
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">
                 {status === 'paused' ? 'Paused on' : 'Playing on'} {player.name}
               </p>
-              <p className="mt-0.5 line-clamp-2 text-lg font-semibold leading-tight">{art.title}</p>
+              <TitleMarquee
+                text={art.title}
+                className="mt-0.5 text-lg font-semibold leading-tight"
+              />
             </div>
           </div>
         </div>
