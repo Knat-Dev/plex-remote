@@ -33,7 +33,10 @@ export default defineConfig({
   },
   server: {
     host: true,
-    proxy: { '/api': 'http://127.0.0.1:31400' },
+    // Dev API target: the local container by default; point API_PROXY at
+    // another instance (e.g. http://plexremote.local:31400 on media01) if the
+    // local one isn't running.
+    proxy: { '/api': process.env.API_PROXY ?? 'http://127.0.0.1:31400' },
   },
   build: { outDir: 'dist' },
 });
