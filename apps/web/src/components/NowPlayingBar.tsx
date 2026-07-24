@@ -25,7 +25,7 @@ export function NowPlayingBar({ onOpen }: NowPlayingBarProps) {
   const meta = nowPlaying?.ratingKey === state.ratingKey ? nowPlaying : undefined;
 
   return (
-    <Card className="sticky bottom-[3.6rem] z-30 mx-2 mb-1 gap-0 overflow-hidden rounded-xl bg-secondary/95 p-0 shadow-lg backdrop-blur">
+    <Card className="z-30 mx-2 mb-1.5 shrink-0 gap-0 overflow-hidden rounded-xl bg-secondary/95 p-0 shadow-lg backdrop-blur">
       <button onClick={onOpen} className="flex w-full items-center gap-3 p-2 pr-3 text-left">
         {meta?.thumbUrl ? (
           <img src={meta.thumbUrl} alt="" className="size-11 shrink-0 rounded-lg object-cover" />

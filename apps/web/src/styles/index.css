@@ -77,7 +77,7 @@
   }
   /* Respect device safe areas (notch / home indicator). */
   .safe-top {
-    padding-top: max(env(safe-area-inset-top), 0.5rem);
+    padding-top: max(env(safe-area-inset-top), 0.75rem);
   }
   .safe-bottom {
     padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);

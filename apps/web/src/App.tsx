@@ -15,6 +15,11 @@ const TAB_ITEMS = [
   { id: 'players' as const, label: 'Players', Icon: Tv },
 ];
 
+/**
+ * Fixed app shell: the page itself never scrolls (h-dvh + overflow-hidden);
+ * each screen scrolls internally. Header and tab bar are anchored, so no
+ * sticky positioning or page scrollbars are ever involved.
+ */
 export function App() {
   const [tab, setTab] = useState<TabId>('browse');
 
@@ -22,30 +27,30 @@ export function App() {
     <Tabs
       value={tab}
       onValueChange={(value) => setTab(value as TabId)}
-      className="mx-auto flex min-h-dvh max-w-lg flex-col gap-0"
+      className="mx-auto flex h-dvh max-w-lg flex-col gap-0 overflow-hidden"
     >
       <AppHeader onLogo={() => setTab('browse')} onOpenPlayers={() => setTab('players')} />
 
-      <main className="flex flex-1 flex-col pt-3">
-        <TabsContent value="browse" className="flex-1">
+      <main className="flex min-h-0 flex-1 flex-col">
+        <TabsContent value="browse" className="min-h-0 flex-1 overflow-y-auto pt-3">
           <BrowseScreen onCasted={() => setTab('remote')} />
         </TabsContent>
-        <TabsContent value="remote" className="flex flex-1 flex-col">
+        <TabsContent value="remote" className="flex min-h-0 flex-1 flex-col overflow-y-auto pt-3">
           <RemoteScreen />
         </TabsContent>
-        <TabsContent value="players" className="flex-1">
+        <TabsContent value="players" className="flex min-h-0 flex-1 flex-col overflow-y-auto pt-3">
           <PlayersScreen onSelected={() => setTab('remote')} />
         </TabsContent>
       </main>
 
       {tab !== 'remote' && <NowPlayingBar onOpen={() => setTab('remote')} />}
 
-      <TabsList className="safe-bottom sticky bottom-0 z-40 h-auto w-full justify-around rounded-none border-t border-border bg-background/90 p-0 backdrop-blur">
+      <TabsList className="safe-bottom h-auto w-full shrink-0 justify-around gap-1 rounded-none border-t border-border bg-background/95 p-0 px-2 pt-1 backdrop-blur">
         {TAB_ITEMS.map(({ id, label, Icon }) => (
           <TabsTrigger
             key={id}
             value={id}
-            className="flex h-auto flex-1 flex-col items-center gap-1 rounded-none border-0 py-2.5 text-xs font-medium text-muted-foreground shadow-none data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
+            className="flex h-auto flex-1 flex-col items-center gap-1 rounded-lg border-0 py-2 text-[11px] font-medium tracking-wide text-muted-foreground shadow-none transition-colors data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none"
           >
             <Icon className="size-5" />
             {label}

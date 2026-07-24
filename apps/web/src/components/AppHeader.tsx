@@ -14,7 +14,7 @@ export function AppHeader({ onLogo, onOpenPlayers }: AppHeaderProps) {
   const playing = state?.status === 'playing' || state?.status === 'buffering';
 
   return (
-    <header className="safe-top sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-border bg-background/90 px-4 pb-3 backdrop-blur">
+    <header className="safe-top z-40 flex shrink-0 items-center justify-between gap-3 border-b border-border bg-background/95 px-4 pb-3 backdrop-blur">
       <button onClick={onLogo} className="flex items-baseline gap-1" aria-label="Go to Browse">
         <span className="text-lg font-bold tracking-tight">Plex</span>
         <span className="text-lg font-bold tracking-tight text-primary">Remote</span>
