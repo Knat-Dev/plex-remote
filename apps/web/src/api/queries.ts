@@ -51,6 +51,32 @@ export function useSectionItems(serverId: string | undefined, sectionKey: string
   });
 }
 
+export function useAllItems(serverId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['all-items', serverId ?? ''],
+    queryFn: () => api.get<MediaItemDto[]>(`/servers/${serverId}/items`),
+    enabled: Boolean(serverId) && enabled,
+  });
+}
+
+/** Everything from every server, mixed. */
+export function useEverything(enabled: boolean) {
+  return useQuery({
+    queryKey: ['everything'],
+    queryFn: () => api.get<MediaItemDto[]>('/items'),
+    enabled,
+  });
+}
+
+/** Search across every server at once. */
+export function useGlobalSearch(query: string) {
+  return useQuery({
+    queryKey: ['global-search', query],
+    queryFn: () => api.get<MediaItemDto[]>(`/search?q=${encodeURIComponent(query)}`),
+    enabled: query.trim().length > 1,
+  });
+}
+
 export function useChildren(serverId: string | undefined, ratingKey: string | undefined) {
   return useQuery({
     queryKey: KEYS.children(serverId ?? '', ratingKey ?? ''),

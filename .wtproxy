@@ -1,0 +1,2 @@
+# wtproxy: how to run this repo's dev server ($PORT is substituted)
+CMD='npm run dev --workspace apps/web -- --port $PORT --strictPort'

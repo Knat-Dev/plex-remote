@@ -43,6 +43,17 @@ export class PlexContentGateway implements ContentGateway {
     return (data.MediaContainer?.Metadata ?? []).map(toMediaItem);
   }
 
+  async listAllItems(serverId: string): Promise<MediaItem[]> {
+    const sections = await this.listSections(serverId);
+    const perSection = await Promise.allSettled(
+      sections.map((section) => this.listSectionItems(serverId, section.key)),
+    );
+    // A single unreachable section must not blank the whole view.
+    return perSection.flatMap((result) =>
+      result.status === 'fulfilled' ? result.value : [],
+    );
+  }
+
   async listChildren(serverId: string, ratingKey: string): Promise<MediaItem[]> {
     const data = await this.#get<Container<MetadataDto>>(
       serverId,

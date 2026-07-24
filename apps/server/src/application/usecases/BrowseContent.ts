@@ -18,6 +18,38 @@ export class BrowseContent {
     return this.content.listSectionItems(serverId, sectionKey);
   }
 
+  allItems(serverId: string): Promise<MediaItem[]> {
+    return this.content.listAllItems(serverId);
+  }
+
+  /** Everything across every server; each entry keeps its origin serverId. */
+  async allItemsEverywhere(): Promise<Array<{ serverId: string; item: MediaItem }>> {
+    return this.#fanOut((serverId) => this.content.listAllItems(serverId));
+  }
+
+  /** Search all servers at once. */
+  async searchEverywhere(query: string): Promise<Array<{ serverId: string; item: MediaItem }>> {
+    return this.#fanOut((serverId) => this.content.search(serverId, query.trim()));
+  }
+
+  async #fanOut(
+    fetch: (serverId: string) => Promise<MediaItem[]>,
+  ): Promise<Array<{ serverId: string; item: MediaItem }>> {
+    const servers = await this.content.listServers();
+    const results = await Promise.allSettled(
+      servers.map(async (server) => ({
+        serverId: server.id,
+        items: await fetch(server.id),
+      })),
+    );
+    // One unreachable server must not blank the aggregate view.
+    return results.flatMap((result) =>
+      result.status === 'fulfilled'
+        ? result.value.items.map((item) => ({ serverId: result.value.serverId, item }))
+        : [],
+    );
+  }
+
   children(serverId: string, ratingKey: string): Promise<MediaItem[]> {
     return this.content.listChildren(serverId, ratingKey);
   }

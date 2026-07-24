@@ -3,16 +3,18 @@ import { ChevronLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ChipRow } from '../../components/ChipRow.tsx';
-import { PosterGrid } from '../../components/PosterGrid.tsx';
+import { VirtualPosterGrid } from '../../components/VirtualPosterGrid.tsx';
 import { PosterSkeleton } from '../../components/PosterSkeleton.tsx';
 import { CastConfirmDrawer } from './CastConfirmDrawer.tsx';
 import { SearchBar } from './SearchBar.tsx';
 import {
+  useAllItems,
   useCast,
   useChildren,
+  useEverything,
+  useGlobalSearch,
   usePlaybackState,
   usePlayers,
-  useSearch,
   useSectionItems,
   useSections,
   useServers,
@@ -20,9 +22,14 @@ import {
 import { usePlayerStore } from '../../state/usePlayerStore.ts';
 import type { MediaItemDto } from '../../api/types.ts';
 
+/** Sentinel ids for the aggregate views. */
+const ALL_SERVERS = '__all__';
+const ALL_SECTIONS = '__all__';
+
 interface Frame {
   ratingKey: string;
   title: string;
+  serverId: string;
 }
 
 interface BrowseScreenProps {
@@ -33,32 +40,52 @@ export function BrowseScreen({ onCasted }: BrowseScreenProps) {
   const { data: servers } = useServers();
   const { activeServerId, setActiveServer, activeClientId, setNowPlaying } = usePlayerStore();
   const { data: players } = usePlayers();
-  const serverId = activeServerId ?? servers?.[0]?.id;
+  // Default view: everything from every server.
+  const serverId = activeServerId ?? ALL_SERVERS;
+  const isAllServers = serverId === ALL_SERVERS;
 
-  const { data: sections } = useSections(serverId);
+  const { data: sections } = useSections(isAllServers ? undefined : serverId);
   const [sectionKey, setSectionKey] = useState<string>();
   const [stack, setStack] = useState<Frame[]>([]);
   const [query, setQuery] = useState('');
   const [pendingCast, setPendingCast] = useState<MediaItemDto>();
 
-  const activeSection = sectionKey ?? sections?.[0]?.key;
+  const activeSection = sectionKey ?? ALL_SECTIONS;
   useEffect(() => setStack([]), [activeSection, serverId]);
 
   const top = stack[stack.length - 1];
-  const sectionQuery = useSectionItems(serverId, top ? undefined : activeSection);
-  const childrenQuery = useChildren(serverId, top?.ratingKey);
-  const searchQuery = useSearch(serverId, query);
+  const browsingAll = !top && isAllServers;
+  const browsingServerAll = !top && !isAllServers && activeSection === ALL_SECTIONS;
+
+  const everythingQuery = useEverything(browsingAll && !query);
+  const sectionQuery = useSectionItems(
+    !top && !isAllServers && activeSection !== ALL_SECTIONS ? serverId : undefined,
+    activeSection !== ALL_SECTIONS ? activeSection : undefined,
+  );
+  const serverAllQuery = useAllItems(
+    isAllServers ? undefined : serverId,
+    browsingServerAll && !query,
+  );
+  const childrenQuery = useChildren(top?.serverId, top?.ratingKey);
+  const searchQuery = useGlobalSearch(query);
   const { data: playbackState } = usePlaybackState(activeClientId);
 
   const cast = useCast(activeClientId);
   const activePlayerName = players?.find((p) => p.clientId === activeClientId)?.name;
 
-  const list = query ? searchQuery : top ? childrenQuery : sectionQuery;
+  const list = query
+    ? searchQuery
+    : top
+      ? childrenQuery
+      : browsingAll
+        ? everythingQuery
+        : browsingServerAll
+          ? serverAllQuery
+          : sectionQuery;
 
   const doCast = (item: MediaItemDto) => {
-    if (!serverId) return;
     cast.mutate(
-      { serverId, ratingKey: item.ratingKey, mediaType: item.type },
+      { serverId: item.serverId, ratingKey: item.ratingKey, mediaType: item.type },
       {
         onSuccess: () => {
           setNowPlaying({
@@ -77,7 +104,10 @@ export function BrowseScreen({ onCasted }: BrowseScreenProps) {
 
   const open = (item: MediaItemDto) => {
     if (item.browsable) {
-      setStack((prev) => [...prev, { ratingKey: item.ratingKey, title: item.title }]);
+      setStack((prev) => [
+        ...prev,
+        { ratingKey: item.ratingKey, title: item.title, serverId: item.serverId },
+      ]);
       return;
     }
     if (!activeClientId) {
@@ -94,23 +124,36 @@ export function BrowseScreen({ onCasted }: BrowseScreenProps) {
   };
 
   const serverChips = useMemo(
-    () => (servers ?? []).map((s) => ({ id: s.id, label: s.name })),
+    () => [
+      { id: ALL_SERVERS, label: 'All' },
+      ...(servers ?? []).map((s) => ({ id: s.id, label: s.name })),
+    ],
     [servers],
   );
   const sectionChips = useMemo(
-    () => (sections ?? []).map((s) => ({ id: s.key, label: s.title })),
+    () => [
+      { id: ALL_SECTIONS, label: 'All' },
+      ...(sections ?? []).map((s) => ({ id: s.key, label: s.title })),
+    ],
     [sections],
   );
 
   return (
-    <div className="flex flex-col gap-3 px-4 pb-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 px-4">
       <SearchBar value={query} onChange={setQuery} />
 
-      {!query && serverChips.length > 1 && (
-        <ChipRow chips={serverChips} activeId={serverId} onSelect={setActiveServer} />
+      {!query && (
+        <ChipRow
+          chips={serverChips}
+          activeId={serverId}
+          onSelect={(id) => {
+            setActiveServer(id);
+            setSectionKey(undefined);
+          }}
+        />
       )}
 
-      {!query && !top && (
+      {!query && !top && !isAllServers && (
         <ChipRow chips={sectionChips} activeId={activeSection} onSelect={setSectionKey} />
       )}
 
@@ -129,11 +172,11 @@ export function BrowseScreen({ onCasted }: BrowseScreenProps) {
       {list.isLoading ? (
         <PosterSkeleton />
       ) : !list.data || list.data.length === 0 ? (
-        <p className="py-16 text-center text-sm text-muted-foreground">
+        <p className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
           {query ? 'No results' : 'Nothing here'}
         </p>
       ) : (
-        <PosterGrid items={list.data} onOpen={open} />
+        <VirtualPosterGrid items={list.data} onOpen={open} />
       )}
 
       <CastConfirmDrawer

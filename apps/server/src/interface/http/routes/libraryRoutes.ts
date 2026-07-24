@@ -10,8 +10,24 @@ export function registerLibraryRoutes(app: FastifyInstance, c: Container): void 
     return (await c.browseContent.servers()).map(serverDto);
   });
 
+  app.get('/api/items', async () => {
+    const entries = await c.browseContent.allItemsEverywhere();
+    return entries.map(({ serverId, item }) => mediaItemDto(serverId, item));
+  });
+
+  app.get('/api/search', async (req) => {
+    const { q } = searchQuerySchema.parse(req.query);
+    const entries = await c.browseContent.searchEverywhere(q);
+    return entries.map(({ serverId, item }) => mediaItemDto(serverId, item));
+  });
+
   app.get<{ Params: ServerParams }>('/api/servers/:serverId/sections', async (req) => {
     return c.browseContent.sections(req.params.serverId);
+  });
+
+  app.get<{ Params: ServerParams }>('/api/servers/:serverId/items', async (req) => {
+    const items = await c.browseContent.allItems(req.params.serverId);
+    return items.map((item) => mediaItemDto(req.params.serverId, item));
   });
 
   app.get<{ Params: ServerParams & { sectionKey: string } }>(

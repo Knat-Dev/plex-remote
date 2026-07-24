@@ -9,6 +9,8 @@ export interface ContentGateway {
   listServers(): Promise<Server[]>;
   listSections(serverId: string): Promise<LibrarySection[]>;
   listSectionItems(serverId: string, sectionKey: string): Promise<MediaItem[]>;
+  /** Every item across all of the server's library sections. */
+  listAllItems(serverId: string): Promise<MediaItem[]>;
   listChildren(serverId: string, ratingKey: string): Promise<MediaItem[]>;
   search(serverId: string, query: string): Promise<MediaItem[]>;
   /** Raw image bytes for a thumb/art path, token applied server-side. */

@@ -24,6 +24,9 @@ export function serverDto(s: Server) {
 
 export function mediaItemDto(serverId: string, item: MediaItem) {
   return {
+    // Origin server travels with the item so cross-server aggregations
+    // ("All", global search) can cast to the right backend.
+    serverId,
     ratingKey: item.ratingKey,
     title: item.title,
     type: item.type,

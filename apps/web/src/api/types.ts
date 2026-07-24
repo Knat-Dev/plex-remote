@@ -22,6 +22,8 @@ export interface SectionDto {
 }
 
 export interface MediaItemDto {
+  /** Origin server — aggregated views mix servers, casting must target this. */
+  serverId: string;
   ratingKey: string;
   title: string;
   type: MediaTypeDto;
