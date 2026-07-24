@@ -6,134 +6,101 @@ interface TitleMarqueeProps {
   className?: string;
   /** Fade zone width in px. */
   fade?: number;
-  /**
-   * 'overlay' (default): fades are gradient overlays INSIDE the box — the
-   * marquee never renders outside its layout bounds (required in grids).
-   * Overlay opacities are animated on the SAME timeline as the text, ramping
-   * exactly while the glyphs traverse the fade zone. Needs a solid surface
-   * color behind the text (`fadeFrom`).
-   * 'bleed': static mask with the box widened by the fade width — for
-   * surfaces where overlays can't match the backdrop (artwork). Only use
-   * where the surrounding layout tolerates the bleed.
-   */
-  variant?: 'overlay' | 'bleed';
-  /** Tailwind gradient-from class matching the surface (overlay variant). */
-  fadeFrom?: string;
 }
 
 const EDGE = 4; // px of overflow tolerance before scrolling kicks in
-const SPEED = 18; // px/s scroll speed — slow, Spotify-like glide
+// GLOBAL phase clock: every marquee shares this fixed cycle, so all marquees
+// on screen move, arrive and dwell in unison (each covers its own distance in
+// the shared travel window). Unsynchronised marquees read as visual chaos.
 const PAUSE_MS = 2000; // dwell at each end
+const TRAVEL_MS = 6000; // one direction of travel
+const TOTAL_MS = 2 * PAUSE_MS + 2 * TRAVEL_MS;
 
 /**
  * Spotify-style title marquee: static unless the text overflows; scrolls
- * end-to-end and back with dwell pauses; each edge fades only while text
- * continues past it, in perfect sync with the glyph motion (all animations
- * share one WAAPI start time). Honors prefers-reduced-motion.
+ * end-to-end and back with dwell pauses.
+ *
+ * Fades are a single full-width MASK whose edge alphas are driven every frame
+ * from the text's actual transform — the approach is gap-proof by
+ * construction (one mask function covers the whole box; there is no seam
+ * between "fade element" and "clip edge" to mis-round), stays inside the
+ * layout bounds (safe in grids), and works over any backdrop including
+ * artwork. Each edge's alpha ramps in proportion to the pixels of text
+ * hidden beyond it, so the fade is locked to the glyph motion.
+ * Honors prefers-reduced-motion by staying static.
  */
-export function TitleMarquee({
-  text,
-  className,
-  fade = 12,
-  variant = 'overlay',
-  fadeFrom = 'from-background',
-}: TitleMarqueeProps) {
+export function TitleMarquee({ text, className, fade = 24 }: TitleMarqueeProps) {
   const outerRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLSpanElement>(null);
-  const leftRef = useRef<HTMLSpanElement>(null);
-  const rightRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const outer = outerRef.current;
     const inner = innerRef.current;
-    const left = leftRef.current;
-    const right = rightRef.current;
     if (!outer || !inner) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    let animations: Animation[] = [];
+    let animation: Animation | undefined;
+    let raf = 0;
+    let lastDistance = -1;
+
+    const setAlphas = (fl: number, fr: number) => {
+      outer.style.setProperty('--fl', fl.toFixed(3));
+      outer.style.setProperty('--fr', fr.toFixed(3));
+    };
 
     const stop = () => {
-      animations.forEach((a) => a.cancel());
-      animations = [];
-      if (right) right.style.opacity = '0';
-      if (left) left.style.opacity = '0';
+      animation?.cancel();
+      animation = undefined;
+      cancelAnimationFrame(raf);
+      setAlphas(0, 0);
     };
 
     const start = () => {
+      const raw = inner.scrollWidth - outer.clientWidth;
+      // +1px slack: over-travel slightly so the tail fully clears the edge on
+      // every DPR even when integer measurement under-counts.
+      const distance = raw + 1;
+      // Restart only on real geometry changes — the observer also fires for
+      // sub-pixel churn while surrounding content loads.
+      if (distance === lastDistance) return;
+      lastDistance = distance;
       stop();
-      const usable = variant === 'bleed' ? outer.clientWidth - 2 * fade : outer.clientWidth;
-      const distance = inner.scrollWidth - usable;
-      const overflowing = distance > EDGE;
+      if (raw <= EDGE) return;
 
-      // Static resting state: only the right fade, and only when clipped.
-      if (right) right.style.opacity = overflowing && variant === 'overlay' ? '1' : '0';
-      if (!overflowing) return;
+      // Resting state before the first frame: text continues rightward.
+      setAlphas(0, 1);
 
-      const travelMs = (distance / SPEED) * 1000;
-      const total = travelMs * 2 + PAUSE_MS * 2;
-      const pause = PAUSE_MS / total;
-      const travel = travelMs / total;
-      // Fraction of the timeline the glyphs spend crossing one fade zone.
-      const ramp = travel * Math.min(1, fade / distance);
+      const pause = PAUSE_MS / TOTAL_MS;
+      const travel = TRAVEL_MS / TOTAL_MS;
 
-      const options: KeyframeAnimationOptions = {
-        duration: total,
-        iterations: Infinity,
-        easing: 'linear',
-      };
-
-      animations.push(
-        inner.animate(
-          [
-            { transform: 'translateX(0)', offset: 0 },
-            { transform: 'translateX(0)', offset: pause },
-            { transform: `translateX(-${distance}px)`, offset: pause + travel },
-            { transform: `translateX(-${distance}px)`, offset: pause + travel + pause },
-            { transform: 'translateX(0)', offset: 1 },
-          ],
-          options,
-        ),
+      animation = inner.animate(
+        [
+          { transform: 'translateX(0)', offset: 0 },
+          { transform: 'translateX(0)', offset: pause },
+          { transform: `translateX(-${distance}px)`, offset: pause + travel },
+          { transform: `translateX(-${distance}px)`, offset: pause + travel + pause },
+          { transform: 'translateX(0)', offset: 1 },
+        ],
+        {
+          duration: TOTAL_MS,
+          iterations: Infinity,
+          easing: 'linear',
+          // Global phase baked in at creation: every marquee derives its
+          // phase from the same clock, whenever it mounted.
+          iterationStart: ((document.timeline.currentTime as number) % TOTAL_MS) / TOTAL_MS,
+        },
       );
 
-      if (variant === 'overlay' && left && right) {
-        // Left fade: appears while the first glyphs leave (first `fade` px of
-        // travel), stays through the far dwell, dissolves as they return.
-        animations.push(
-          left.animate(
-            [
-              { opacity: 0, offset: 0 },
-              { opacity: 0, offset: pause },
-              { opacity: 1, offset: pause + ramp },
-              { opacity: 1, offset: 1 - ramp },
-              { opacity: 0, offset: 1 },
-            ],
-            options,
-          ),
-        );
-        // Right fade: on while text continues past the right edge; releases
-        // exactly as the tail crosses the zone, returns symmetrically.
-        animations.push(
-          right.animate(
-            [
-              { opacity: 1, offset: 0 },
-              { opacity: 1, offset: pause + travel - ramp },
-              { opacity: 0, offset: pause + travel },
-              { opacity: 0, offset: pause + travel + pause },
-              { opacity: 1, offset: pause + travel + pause + ramp },
-              { opacity: 1, offset: 1 },
-            ],
-            options,
-          ),
-        );
-      }
-
-      // Lock every animation to one clock so the fades can never drift from
-      // the glyph motion.
-      const startTime = document.timeline.currentTime;
-      animations.forEach((a) => {
-        a.startTime = startTime;
-      });
+      const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+      const tick = () => {
+        const matrix = new DOMMatrixReadOnly(getComputedStyle(inner).transform);
+        const tx = -matrix.m41; // 0 .. distance
+        // Alpha follows the glyphs: n px of text hidden beyond an edge ⇒
+        // n/fade of that edge's fade strength.
+        setAlphas(clamp01(tx / fade), clamp01((distance - tx) / fade));
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
     };
 
     start();
@@ -143,52 +110,21 @@ export function TitleMarquee({
       observer.disconnect();
       stop();
     };
-  }, [text, fade, variant]);
+  }, [text, fade]);
 
-  const mask =
-    variant === 'bleed'
-      ? `linear-gradient(to right, transparent 0, #000 ${fade}px, #000 calc(100% - ${fade}px), transparent 100%)`
-      : undefined;
+  // Edge alphas are CSS vars the rAF loop drives; 1 - var flips "how much
+  // text continues past this edge" into mask transparency at that edge.
+  const mask = `linear-gradient(to right, rgba(0,0,0,calc(1 - var(--fl, 0))) 0, #000 ${fade}px, #000 calc(100% - ${fade}px), rgba(0,0,0,calc(1 - var(--fr, 0))) 100%)`;
 
   return (
     <div
       ref={outerRef}
-      className={cn('relative overflow-hidden whitespace-nowrap', className)}
-      style={
-        variant === 'bleed'
-          ? { maskImage: mask, WebkitMaskImage: mask, paddingInline: fade, marginInline: -fade }
-          : undefined
-      }
+      className={cn('overflow-hidden whitespace-nowrap', className)}
+      style={{ maskImage: mask, WebkitMaskImage: mask }}
     >
       <span ref={innerRef} className="inline-block will-change-transform">
         {text}
       </span>
-      {variant === 'overlay' && (
-        <>
-          {/* Overlays overshoot the box by 2px and get cut by the container's
-              own clip — fractional grid widths otherwise pixel-snap the
-              overlay a hair inside the clip edge, leaving a bare column where
-              moving glyphs flicker through. */}
-          <span
-            ref={leftRef}
-            aria-hidden
-            style={{ width: fade + 2, left: -2, opacity: 0 }}
-            className={cn(
-              'pointer-events-none absolute inset-y-0 bg-gradient-to-r to-transparent',
-              fadeFrom,
-            )}
-          />
-          <span
-            ref={rightRef}
-            aria-hidden
-            style={{ width: fade + 2, right: -2, opacity: 0 }}
-            className={cn(
-              'pointer-events-none absolute inset-y-0 bg-gradient-to-l to-transparent',
-              fadeFrom,
-            )}
-          />
-        </>
-      )}
     </div>
   );
 }
