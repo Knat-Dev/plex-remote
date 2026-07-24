@@ -1,0 +1,22 @@
+# Plex Remote — command-based remote control for Plex players.
+#
+# host networking is deliberate, twice over:
+# - the LAN guard authorises by raw socket address; behind a bridge every
+#   request would arrive from the docker gateway and the guard would be blind.
+# - the app must reach Plex servers on the LAN (and their relays) directly.
+#
+# The Plex token is read at runtime from the mounted PMS Preferences.xml
+# (read-only) so no secret is baked into the image or this file. Set PLEX_TOKEN
+# in the environment instead if the server's config lives elsewhere.
+services:
+  plex-remote:
+    build: .
+    image: plex-remote:latest
+    container_name: plex-remote
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      - PORT=31400
+      - PLEX_PREFERENCES_PATH=/plex-prefs/Preferences.xml
+    volumes:
+      - ${PLEX_PREFS_DIR:-~/arr-stack/plex/config/Library/Application Support/Plex Media Server}:/plex-prefs:ro

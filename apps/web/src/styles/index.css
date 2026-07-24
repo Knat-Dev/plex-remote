@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+
+/* Design tokens — a small, consistent scale drives the whole UI. */
+@theme {
+  --color-bg: #0b0b0f;
+  --color-surface: #16161d;
+  --color-surface-2: #1f1f28;
+  --color-border: #2a2a35;
+  --color-text: #f4f4f6;
+  --color-muted: #9a9aa8;
+  --color-brand: #e5a00d;
+  --color-brand-strong: #f5b923;
+  --radius-card: 0.75rem;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    overscroll-behavior-y: none;
+  }
+  button {
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  /* Respect device safe areas (notch / home indicator). */
+  .safe-top {
+    padding-top: max(env(safe-area-inset-top), 0.5rem);
+  }
+  .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+  }
+}

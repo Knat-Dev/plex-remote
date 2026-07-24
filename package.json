@@ -1,0 +1,19 @@
+{
+  "name": "plex-remote",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Command-based remote control for any Plex player (no Cast).",
+  "type": "module",
+  "workspaces": [
+    "apps/server",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace apps/server & npm run dev --workspace apps/web",
+    "build": "npm run build --workspace apps/server && npm run build --workspace apps/web",
+    "start": "npm run start --workspace apps/server"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
