@@ -67,6 +67,20 @@ design system (`styles/index.css` + `ui/atoms.tsx`), composition-style hooks
 (`useActivePlayer`), poster-grid browsing with skeletons, live now-playing
 mini-bar, artwork remote with scrubber, D-pad navigation, and volume.
 
+## Releases & updating
+
+Conventional commits drive everything: `fix:` → patch, `feat:` → minor,
+`feat!:`/`BREAKING CHANGE` → major.
+
+- **release-please** maintains a rolling release PR on `master`; merging it
+  tags `vX.Y.Z`, writes the changelog and cuts the GitHub Release.
+- The docker workflow publishes `ghcr.io/knat-dev/plex-remote` with the full
+  semver tag set (`X.Y.Z`, `X.Y`, `X`, `latest`) on release, and `:edge` +
+  `sha-…` on every master push.
+- Deployments pin a semver tag; Renovate (in the homelab repo) proposes
+  version bumps as PRs — merging the PR and converging is the whole update
+  flow.
+
 ## Local domain
 
 `plexremote.local` is published via an avahi alias (systemd unit

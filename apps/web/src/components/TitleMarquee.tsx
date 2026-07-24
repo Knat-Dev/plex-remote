@@ -9,6 +9,7 @@ interface TitleMarqueeProps {
 const EDGE = 2; // px of tolerance before a side counts as overflowing
 const SPEED = 18; // px/s scroll speed — slow, Spotify-like glide
 const PAUSE_MS = 2000; // dwell at each end
+const FADE_RAMP = 24; // px of travel over which an edge fade ramps in/out
 
 /**
  * Spotify-style title marquee: static (truncated) unless the text actually
@@ -64,8 +65,13 @@ export function TitleMarquee({ text, className }: TitleMarqueeProps) {
       const tick = () => {
         const matrix = new DOMMatrixReadOnly(getComputedStyle(inner).transform);
         const tx = -matrix.m41; // 0 .. distance
-        outer.style.setProperty('--fade-l', tx > EDGE ? '1' : '0');
-        outer.style.setProperty('--fade-r', tx < distance - EDGE ? '1' : '0');
+        // Fades ramp proportionally with the travel itself: the left fade
+        // grows in over the first FADE_RAMP px as the text departs, the right
+        // fade dissolves over the last FADE_RAMP px as the tail arrives —
+        // continuous and in lockstep with the motion, never a pop.
+        const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+        outer.style.setProperty('--fade-l', clamp01(tx / FADE_RAMP).toFixed(3));
+        outer.style.setProperty('--fade-r', clamp01((distance - tx) / FADE_RAMP).toFixed(3));
         raf = requestAnimationFrame(tick);
       };
       raf = requestAnimationFrame(tick);

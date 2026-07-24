@@ -1,0 +1,20 @@
+name: release-please
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      # Maintains a rolling release PR from conventional commits; merging it
+      # updates CHANGELOG.md + package.json, tags vX.Y.Z and cuts the GitHub
+      # Release — which triggers the docker workflow's semver publish.
+      - uses: googleapis/release-please-action@v4
+        with:
+          release-type: node
