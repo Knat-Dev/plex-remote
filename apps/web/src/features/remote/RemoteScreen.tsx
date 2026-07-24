@@ -1,27 +1,28 @@
 import { useEffect, useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useActivePlayer } from '../../hooks/useActivePlayer.ts';
 import { usePlayerStore } from '../../state/usePlayerStore.ts';
-import { EmptyState } from '../../ui/Spinner.tsx';
-import { Segmented } from '../../ui/atoms.tsx';
 import { Scrubber } from './Scrubber.tsx';
 import { StopButton, TransportControls } from './TransportControls.tsx';
 import { VolumeSlider } from './VolumeSlider.tsx';
 import { DPad } from './DPad.tsx';
 
-type Tab = 'playback' | 'navigate';
-
 export function RemoteScreen() {
-  const { clientId: activeClientId, player, state, commands } = useActivePlayer();
+  const { player, state, commands, isReady } = useActivePlayer();
   const { nowPlaying } = usePlayerStore();
-  const [tab, setTab] = useState<Tab>('playback');
 
   const [volume, setVolume] = useState(100);
   useEffect(() => {
     if (state?.volume !== undefined) setVolume(state.volume);
   }, [state?.volume]);
 
-  if (!activeClientId || !player) {
-    return <EmptyState message="Select a player from the Players tab to begin." />;
+  if (!isReady || !player) {
+    return (
+      <p className="py-16 text-center text-sm text-muted-foreground">
+        Select a player from the Players tab to begin.
+      </p>
+    );
   }
 
   const status = state?.status ?? 'stopped';
@@ -32,7 +33,7 @@ export function RemoteScreen() {
   return (
     <div className="flex flex-col gap-5 px-4 pb-4">
       {art ? (
-        <div className="relative overflow-hidden rounded-2xl ring-1 ring-[var(--color-border)]">
+        <div className="relative overflow-hidden rounded-xl ring-1 ring-border">
           {art.artUrl && (
             <img
               src={art.artUrl}
@@ -49,31 +50,40 @@ export function RemoteScreen() {
               />
             )}
             <div className="min-w-0">
-              <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
                 {status === 'paused' ? 'Paused on' : 'Playing on'} {player.name}
               </p>
-              <p className="mt-0.5 line-clamp-2 text-lg font-semibold leading-tight">
-                {art.title}
-              </p>
+              <p className="mt-0.5 line-clamp-2 text-lg font-semibold leading-tight">{art.title}</p>
             </div>
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl bg-[var(--color-surface)] p-4 ring-1 ring-[var(--color-border)]">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-muted)]">Now controlling</p>
-          <p className="text-lg font-semibold">{player.name}</p>
-          <p className="text-sm text-[var(--color-muted)]">{player.product}</p>
-        </div>
+        <Card className="py-4">
+          <CardContent className="px-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Now controlling</p>
+            <p className="text-lg font-semibold">{player.name}</p>
+            <p className="text-sm text-muted-foreground">{player.product}</p>
+          </CardContent>
+        </Card>
       )}
 
-      {player.canNavigate && (
-        <Segmented options={['playback', 'navigate'] as const} value={tab} onChange={setTab} />
-      )}
+      <Tabs defaultValue="playback">
+        {player.canNavigate && (
+          <TabsList className="w-full rounded-full">
+            <TabsTrigger value="playback" className="flex-1 rounded-full">
+              Playback
+            </TabsTrigger>
+            <TabsTrigger value="navigate" className="flex-1 rounded-full">
+              Navigate
+            </TabsTrigger>
+          </TabsList>
+        )}
 
-      {tab === 'playback' || !player.canNavigate ? (
-        <div className="flex flex-col gap-5">
+        <TabsContent value="playback" className="mt-5 flex flex-col gap-5">
           {isIdle ? (
-            <EmptyState message="Nothing playing. Pick something from Browse to cast." />
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              Nothing playing. Pick something from Browse to cast.
+            </p>
           ) : (
             <Scrubber
               timeMs={state?.timeMs ?? 0}
@@ -90,10 +100,12 @@ export function RemoteScreen() {
             }}
           />
           {!isIdle && <StopButton onCommand={(c) => commands.playback.mutate(c)} />}
-        </div>
-      ) : (
-        <DPad onNavigate={(a) => commands.navigate.mutate(a)} />
-      )}
+        </TabsContent>
+
+        <TabsContent value="navigate" className="mt-5">
+          <DPad onNavigate={(a) => commands.navigate.mutate(a)} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

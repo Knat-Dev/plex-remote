@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Slider } from '@/components/ui/slider';
 import { formatTime } from '../../util/format.ts';
 
 interface ScrubberProps {
@@ -22,26 +23,22 @@ export function Scrubber({ timeMs, durationMs, onSeek }: ScrubberProps) {
   const max = Math.max(durationMs, 1);
 
   return (
-    <div className="flex flex-col gap-1">
-      <input
-        type="range"
+    <div className="flex flex-col gap-2">
+      <Slider
         min={0}
         max={max}
-        value={Math.min(value, max)}
-        onChange={(e) => {
+        step={1000}
+        value={[Math.min(value, max)]}
+        onValueChange={([v]) => {
           setDragging(true);
-          setValue(Number(e.target.value));
+          setValue(v ?? 0);
         }}
-        onPointerUp={() => {
+        onValueCommit={([v]) => {
           setDragging(false);
-          onSeek(value);
-        }}
-        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[var(--color-border)] accent-[var(--color-brand)]"
-        style={{
-          background: `linear-gradient(to right, var(--color-brand) ${(value / max) * 100}%, var(--color-border) ${(value / max) * 100}%)`,
+          onSeek(v ?? 0);
         }}
       />
-      <div className="flex justify-between text-xs tabular-nums text-[var(--color-muted)]">
+      <div className="flex justify-between text-xs tabular-nums text-muted-foreground">
         <span>{formatTime(value)}</span>
         <span>{formatTime(durationMs)}</span>
       </div>

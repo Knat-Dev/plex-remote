@@ -1,4 +1,6 @@
-import { SearchIcon } from '../../ui/icons.tsx';
+import { Search, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface SearchBarProps {
   value: string;
@@ -7,20 +9,26 @@ interface SearchBarProps {
 
 export function SearchBar({ value, onChange }: SearchBarProps) {
   return (
-    <label className="flex items-center gap-2 rounded-xl bg-[var(--color-surface-2)] px-3 py-2.5 ring-1 ring-[var(--color-border)] focus-within:ring-[var(--color-brand)]">
-      <SearchIcon width={18} height={18} className="text-[var(--color-muted)]" />
-      <input
+    <div className="relative">
+      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Search all libraries"
         inputMode="search"
-        className="w-full bg-transparent text-sm outline-none placeholder:text-[var(--color-muted)]"
+        className="rounded-xl bg-secondary pl-9 pr-9"
       />
       {value && (
-        <button onClick={() => onChange('')} className="text-sm text-[var(--color-muted)]">
-          Clear
-        </button>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Clear search"
+          onClick={() => onChange('')}
+          className="absolute right-1 top-1/2 size-7 -translate-y-1/2 rounded-full text-muted-foreground"
+        >
+          <X className="size-4" />
+        </Button>
       )}
-    </label>
+    </div>
   );
 }

@@ -1,7 +1,10 @@
+import { Tv } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import { usePlayers } from '../../api/queries.ts';
 import { usePlayerStore } from '../../state/usePlayerStore.ts';
-import { EmptyState, Spinner } from '../../ui/Spinner.tsx';
-import { TvIcon } from '../../ui/icons.tsx';
 
 interface PlayersScreenProps {
   onSelected: () => void;
@@ -11,44 +14,58 @@ export function PlayersScreen({ onSelected }: PlayersScreenProps) {
   const { data: players, isLoading } = usePlayers();
   const { activeClientId, setActivePlayer } = usePlayerStore();
 
-  if (isLoading) return <Spinner label="Finding players…" />;
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-3 px-4">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <Skeleton key={i} className="h-20 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
   if (!players || players.length === 0) {
-    return <EmptyState message="No players found on your network." />;
+    return (
+      <p className="py-16 text-center text-sm text-muted-foreground">
+        No players found on your network.
+      </p>
+    );
   }
 
   return (
     <div className="flex flex-col gap-3 px-4 pb-4">
-      <p className="text-sm text-[var(--color-muted)]">
+      <p className="text-sm text-muted-foreground">
         Choose which player to control. Only players on your network appear here.
       </p>
       {players.map((player) => {
         const active = player.clientId === activeClientId;
         return (
-          <button
+          <Card
             key={player.clientId}
+            role="button"
+            tabIndex={0}
             onClick={() => {
               setActivePlayer(player.clientId);
               onSelected();
             }}
-            className={`flex items-center gap-3 rounded-2xl p-4 text-left ring-1 transition active:scale-[0.99] ${
-              active
-                ? 'bg-[var(--color-brand)]/10 ring-[var(--color-brand)]'
-                : 'bg-[var(--color-surface)] ring-[var(--color-border)]'
-            }`}
+            className={cn(
+              'flex-row items-center gap-3 p-4 transition active:scale-[0.99]',
+              active && 'bg-primary/10 ring-1 ring-primary',
+            )}
           >
             <span
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
-                active ? 'bg-[var(--color-brand)] text-black' : 'bg-[var(--color-surface-2)] text-[var(--color-muted)]'
-              }`}
+              className={cn(
+                'flex size-11 shrink-0 items-center justify-center rounded-full',
+                active ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground',
+              )}
             >
-              <TvIcon width={22} height={22} />
+              <Tv className="size-5" />
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium">{player.name}</p>
-              <p className="truncate text-sm text-[var(--color-muted)]">{player.product}</p>
+              <p className="truncate text-sm text-muted-foreground">{player.product}</p>
             </div>
-            {active && <span className="text-sm font-medium text-[var(--color-brand)]">Active</span>}
-          </button>
+            {active && <Badge>Active</Badge>}
+          </Card>
         );
       })}
     </div>

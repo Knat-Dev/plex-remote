@@ -2,6 +2,7 @@ import { stat } from 'node:fs/promises';
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
+import { ZodError } from 'zod';
 import type { Environment } from '../../config/environment.js';
 import type { Container } from '../../container.js';
 import { NotFoundError, ValidationError } from '../../shared/errors.js';
@@ -49,6 +50,7 @@ function registerErrorHandler(app: FastifyInstance): void {
 }
 
 function statusFor(error: unknown): number {
+  if (error instanceof ZodError) return 400;
   if (error instanceof ValidationError) return 400;
   if (error instanceof NotFoundError) return 404;
   if (error instanceof PlexHttpError) return error.status >= 500 ? 502 : error.status;

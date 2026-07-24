@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { Container } from '../../../container.js';
 import { mediaItemDto, serverDto } from '../mappers/dto.js';
-import { requireString } from '../validate.js';
+import { imageQuerySchema, searchQuerySchema } from '../schemas.js';
 
 type ServerParams = { serverId: string };
 
@@ -33,25 +33,18 @@ export function registerLibraryRoutes(app: FastifyInstance, c: Container): void 
     },
   );
 
-  app.get<{ Params: ServerParams; Querystring: { q?: string } }>(
-    '/api/servers/:serverId/search',
-    async (req) => {
-      const query = requireString(req.query.q, 'q');
-      const items = await c.browseContent.search(req.params.serverId, query);
-      return items.map((item) => mediaItemDto(req.params.serverId, item));
-    },
-  );
+  app.get<{ Params: ServerParams }>('/api/servers/:serverId/search', async (req) => {
+    const { q } = searchQuerySchema.parse(req.query);
+    const items = await c.browseContent.search(req.params.serverId, q);
+    return items.map((item) => mediaItemDto(req.params.serverId, item));
+  });
 
-  app.get<{ Querystring: { serverId?: string; path?: string } }>(
-    '/api/image',
-    async (req, reply) => {
-      const serverId = requireString(req.query.serverId, 'serverId');
-      const path = requireString(req.query.path, 'path');
-      const image = await c.browseContent.image(serverId, path);
-      return reply
-        .header('content-type', image.contentType)
-        .header('cache-control', 'public, max-age=86400')
-        .send(image.body);
-    },
-  );
+  app.get('/api/image', async (req, reply) => {
+    const { serverId, path } = imageQuerySchema.parse(req.query);
+    const image = await c.browseContent.image(serverId, path);
+    return reply
+      .header('content-type', image.contentType)
+      .header('cache-control', 'public, max-age=86400')
+      .send(image.body);
+  });
 }

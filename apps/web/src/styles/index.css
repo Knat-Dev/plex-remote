@@ -1,27 +1,72 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
 
-/* Design tokens — a small, consistent scale drives the whole UI. */
-@theme {
-  --color-bg: #0b0b0f;
-  --color-surface: #16161d;
-  --color-surface-2: #1f1f28;
-  --color-border: #2a2a35;
-  --color-text: #f4f4f6;
-  --color-muted: #9a9aa8;
-  --color-brand: #e5a00d;
-  --color-brand-strong: #f5b923;
-  --radius-card: 0.75rem;
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Plex-dark theme expressed through shadcn's semantic token contract.
+ * The app is dark-only, so :root carries the dark palette directly.
+ */
+:root {
+  --background: #0b0b0f;
+  --foreground: #f4f4f6;
+  --card: #16161d;
+  --card-foreground: #f4f4f6;
+  --popover: #1f1f28;
+  --popover-foreground: #f4f4f6;
+  --primary: #e5a00d;
+  --primary-foreground: #14100a;
+  --secondary: #1f1f28;
+  --secondary-foreground: #f4f4f6;
+  --muted: #1f1f28;
+  --muted-foreground: #9a9aa8;
+  --accent: #23232e;
+  --accent-foreground: #f4f4f6;
+  --destructive: #ef4444;
+  --destructive-foreground: #f4f4f6;
+  --border: #2a2a35;
+  --input: #2a2a35;
+  --ring: #e5a00d;
+  --radius: 0.75rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 @layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
   html {
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
   }
   body {
+    @apply bg-background text-foreground;
     margin: 0;
-    background: var(--color-bg);
-    color: var(--color-text);
     font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     overscroll-behavior-y: none;
   }

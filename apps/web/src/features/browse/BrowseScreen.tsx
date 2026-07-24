@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ChevronLeft } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import { ChipRow } from '../../components/ChipRow.tsx';
 import { PosterGrid } from '../../components/PosterGrid.tsx';
 import { PosterSkeleton } from '../../components/PosterSkeleton.tsx';
-import { EmptyState } from '../../ui/Spinner.tsx';
-import { BackIcon } from '../../ui/icons.tsx';
+import { CastConfirmDrawer } from './CastConfirmDrawer.tsx';
 import { SearchBar } from './SearchBar.tsx';
 import {
   useCast,
   useChildren,
+  usePlaybackState,
   usePlayers,
   useSearch,
   useSectionItems,
@@ -15,7 +18,6 @@ import {
   useServers,
 } from '../../api/queries.ts';
 import { usePlayerStore } from '../../state/usePlayerStore.ts';
-import { useToast } from '../../ui/Toast.tsx';
 import type { MediaItemDto } from '../../api/types.ts';
 
 interface Frame {
@@ -23,8 +25,11 @@ interface Frame {
   title: string;
 }
 
-export function BrowseScreen() {
-  const notify = useToast();
+interface BrowseScreenProps {
+  onCasted: () => void;
+}
+
+export function BrowseScreen({ onCasted }: BrowseScreenProps) {
   const { data: servers } = useServers();
   const { activeServerId, setActiveServer, activeClientId, setNowPlaying } = usePlayerStore();
   const { data: players } = usePlayers();
@@ -34,6 +39,7 @@ export function BrowseScreen() {
   const [sectionKey, setSectionKey] = useState<string>();
   const [stack, setStack] = useState<Frame[]>([]);
   const [query, setQuery] = useState('');
+  const [pendingCast, setPendingCast] = useState<MediaItemDto>();
 
   const activeSection = sectionKey ?? sections?.[0]?.key;
   useEffect(() => setStack([]), [activeSection, serverId]);
@@ -42,22 +48,15 @@ export function BrowseScreen() {
   const sectionQuery = useSectionItems(serverId, top ? undefined : activeSection);
   const childrenQuery = useChildren(serverId, top?.ratingKey);
   const searchQuery = useSearch(serverId, query);
+  const { data: playbackState } = usePlaybackState(activeClientId);
 
   const cast = useCast(activeClientId);
   const activePlayerName = players?.find((p) => p.clientId === activeClientId)?.name;
 
   const list = query ? searchQuery : top ? childrenQuery : sectionQuery;
 
-  const open = (item: MediaItemDto) => {
-    if (item.browsable) {
-      setStack((prev) => [...prev, { ratingKey: item.ratingKey, title: item.title }]);
-      return;
-    }
+  const doCast = (item: MediaItemDto) => {
     if (!serverId) return;
-    if (!activeClientId) {
-      notify('Pick a player first', 'error');
-      return;
-    }
     cast.mutate(
       { serverId, ratingKey: item.ratingKey, mediaType: item.type },
       {
@@ -68,11 +67,30 @@ export function BrowseScreen() {
             thumbUrl: item.thumbUrl,
             artUrl: item.artUrl,
           });
-          notify(`Casting “${item.title}” to ${activePlayerName ?? 'player'}`);
+          toast(`Casting “${item.title}” to ${activePlayerName ?? 'player'}`);
+          onCasted();
         },
-        onError: (e) => notify(e instanceof Error ? e.message : 'Cast failed', 'error'),
+        onError: (e) => toast.error(e instanceof Error ? e.message : 'Cast failed'),
       },
     );
+  };
+
+  const open = (item: MediaItemDto) => {
+    if (item.browsable) {
+      setStack((prev) => [...prev, { ratingKey: item.ratingKey, title: item.title }]);
+      return;
+    }
+    if (!activeClientId) {
+      toast.error('Pick a player first');
+      return;
+    }
+    // Mid-watch protection: replacing active playback needs explicit consent.
+    const busy = playbackState && playbackState.status !== 'stopped';
+    if (busy && playbackState.ratingKey !== item.ratingKey) {
+      setPendingCast(item);
+      return;
+    }
+    doCast(item);
   };
 
   const serverChips = useMemo(
@@ -97,22 +115,36 @@ export function BrowseScreen() {
       )}
 
       {!query && top && (
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => setStack((prev) => prev.slice(0, -1))}
-          className="flex items-center gap-1 self-start rounded-full bg-[var(--color-surface-2)] py-1.5 pl-2 pr-3 text-sm ring-1 ring-[var(--color-border)]"
+          className="self-start rounded-full"
         >
-          <BackIcon width={18} height={18} />
+          <ChevronLeft className="size-4" />
           {top.title}
-        </button>
+        </Button>
       )}
 
       {list.isLoading ? (
         <PosterSkeleton />
       ) : !list.data || list.data.length === 0 ? (
-        <EmptyState message={query ? 'No results' : 'Nothing here'} />
+        <p className="py-16 text-center text-sm text-muted-foreground">
+          {query ? 'No results' : 'Nothing here'}
+        </p>
       ) : (
         <PosterGrid items={list.data} onOpen={open} />
       )}
+
+      <CastConfirmDrawer
+        item={pendingCast}
+        playerName={activePlayerName}
+        onConfirm={(item) => {
+          setPendingCast(undefined);
+          doCast(item);
+        }}
+        onClose={() => setPendingCast(undefined)}
+      />
     </div>
   );
 }

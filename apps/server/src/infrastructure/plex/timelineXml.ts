@@ -1,7 +1,9 @@
+import { XMLParser } from 'fast-xml-parser';
+
 /**
  * The /player/timeline/poll endpoint always replies in XML, ignoring the JSON
- * Accept header. Rather than pull in a full XML parser for a flat, attribute-only
- * document, we extract each <Timeline .../> element's attributes directly.
+ * Accept header. Parsed with fast-xml-parser; we only care about the flat
+ * <Timeline .../> elements' attributes.
  */
 export interface TimelineAttributes {
   state: string | undefined;
@@ -15,27 +17,38 @@ export interface TimelineAttributes {
   shuffle: string | undefined;
 }
 
+const parser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '',
+  parseAttributeValue: false,
+  isArray: (name) => name === 'Timeline',
+});
+
+interface ParsedDocument {
+  MediaContainer?: { Timeline?: Array<Record<string, string>> };
+}
+
 export function parseTimelines(xml: string): TimelineAttributes[] {
-  const elements = xml.match(/<Timeline\b[^>]*\/?>/g) ?? [];
-  return elements.map((element) => ({
-    state: attr(element, 'state'),
-    type: attr(element, 'type'),
-    time: num(element, 'time'),
-    duration: num(element, 'duration'),
-    ratingKey: attr(element, 'ratingKey'),
-    volume: num(element, 'volume'),
-    muted: attr(element, 'muted'),
-    repeat: attr(element, 'repeat'),
-    shuffle: attr(element, 'shuffle'),
+  let doc: ParsedDocument;
+  try {
+    doc = parser.parse(xml) as ParsedDocument;
+  } catch {
+    return [];
+  }
+  return (doc.MediaContainer?.Timeline ?? []).map((el) => ({
+    state: el.state,
+    type: el.type,
+    time: num(el.time),
+    duration: num(el.duration),
+    ratingKey: el.ratingKey,
+    volume: num(el.volume),
+    muted: el.muted,
+    repeat: el.repeat,
+    shuffle: el.shuffle,
   }));
 }
 
-function attr(element: string, name: string): string | undefined {
-  return new RegExp(`\\b${name}="([^"]*)"`).exec(element)?.[1];
-}
-
-function num(element: string, name: string): number | undefined {
-  const raw = attr(element, name);
+function num(raw: string | undefined): number | undefined {
   if (raw === undefined) return undefined;
   const parsed = Number(raw);
   return Number.isFinite(parsed) ? parsed : undefined;

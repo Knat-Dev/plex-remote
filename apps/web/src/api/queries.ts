@@ -5,6 +5,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 import { api } from './client.ts';
+import { pollHold, predictPlayback, predictSeek, predictVolume } from './optimistic.ts';
 import type {
   MediaItemDto,
   NavigationActionDto,
@@ -68,13 +69,28 @@ export function useSearch(serverId: string | undefined, query: string) {
 }
 
 export function usePlaybackState(clientId: string | undefined) {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: KEYS.state(clientId ?? ''),
-    queryFn: () => api.get<PlaybackStateDto>(`/players/${clientId}/state`),
+    queryFn: async () => {
+      // During the optimistic hold, serve the predicted state instead of
+      // hitting the network — a timer scheduled before the command fired
+      // could otherwise fetch and reinstate stale state mid-transition.
+      if (pollHold.remainingMs() > 0) {
+        const cached = qc.getQueryData<PlaybackStateDto>(KEYS.state(clientId ?? ''));
+        if (cached) return cached;
+      }
+      return api.get<PlaybackStateDto>(`/players/${clientId}/state`);
+    },
     enabled: Boolean(clientId),
     // Keep polling when the window is unfocused: the remote often runs
-    // side-by-side with other apps and must stay truthful.
-    refetchInterval: 1000,
+    // side-by-side with other apps and must stay truthful. After a command,
+    // the poll backs off briefly so a stale reading cannot overwrite the
+    // optimistic state while the player is still reacting.
+    refetchInterval: () => {
+      const hold = pollHold.remainingMs();
+      return hold > 0 ? hold + 100 : 1000;
+    },
     refetchIntervalInBackground: true,
   });
 }
@@ -88,23 +104,47 @@ export function useCast(clientId: string | undefined) {
 
 export function usePlayerCommands(clientId: string | undefined) {
   const qc = useQueryClient();
-  const invalidate = () => qc.invalidateQueries({ queryKey: KEYS.state(clientId ?? '') });
+  const stateKey = KEYS.state(clientId ?? '');
+
+  /**
+   * Optimistic mutation scaffold: cancel in-flight polls, apply the predicted
+   * state immediately, hold polling while the player reacts, roll back on
+   * error. The regular poll reconciles with reality once the hold expires.
+   */
+  const optimistic = <TVars>(
+    mutationFn: (vars: TVars) => Promise<unknown>,
+    predict: (state: PlaybackStateDto, vars: TVars) => PlaybackStateDto,
+  ) =>
+    useMutation({
+      mutationFn,
+      onMutate: async (vars: TVars) => {
+        await qc.cancelQueries({ queryKey: stateKey });
+        const previous = qc.getQueryData<PlaybackStateDto>(stateKey);
+        if (previous) qc.setQueryData(stateKey, predict(previous, vars));
+        pollHold.start();
+        return { previous };
+      },
+      onError: (_err, _vars, context) => {
+        if (context?.previous) qc.setQueryData(stateKey, context.previous);
+      },
+    });
+
   return {
-    playback: useMutation({
-      mutationFn: (command: PlaybackCommandDto) =>
-        api.post(`/players/${clientId}/playback`, { command }),
-      onSuccess: invalidate,
-    }),
+    playback: optimistic(
+      (command: PlaybackCommandDto) => api.post(`/players/${clientId}/playback`, { command }),
+      predictPlayback,
+    ),
+    seek: optimistic(
+      (offsetMs: number) => api.post(`/players/${clientId}/seek`, { offsetMs }),
+      predictSeek,
+    ),
+    volume: optimistic(
+      (level: number) => api.post(`/players/${clientId}/volume`, { level }),
+      predictVolume,
+    ),
     navigate: useMutation({
       mutationFn: (action: NavigationActionDto) =>
         api.post(`/players/${clientId}/navigate`, { action }),
-    }),
-    seek: useMutation({
-      mutationFn: (offsetMs: number) => api.post(`/players/${clientId}/seek`, { offsetMs }),
-      onSuccess: invalidate,
-    }),
-    volume: useMutation({
-      mutationFn: (level: number) => api.post(`/players/${clientId}/volume`, { level }),
     }),
   };
 }
