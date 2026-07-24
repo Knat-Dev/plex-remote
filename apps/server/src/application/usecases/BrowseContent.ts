@@ -63,6 +63,10 @@ export class BrowseContent {
     return this.content.getItem(serverId, ratingKey);
   }
 
+  setWatched(serverId: string, ratingKey: string, watched: boolean): Promise<void> {
+    return this.content.setWatched(serverId, ratingKey, watched);
+  }
+
   search(serverId: string, query: string): Promise<MediaItem[]> {
     return this.content.search(serverId, query.trim());
   }

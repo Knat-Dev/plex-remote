@@ -1,34 +1,61 @@
+import { useState } from 'react';
 import { Check, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 import { TitleMarquee } from './TitleMarquee.tsx';
+import { useLongPress } from '../hooks/useLongPress.ts';
 import type { MediaItemDto } from '../api/types.ts';
 
 interface MediaCardProps {
   item: MediaItemDto;
   onOpen: (item: MediaItemDto) => void;
+  onLongPress: (item: MediaItemDto) => void;
 }
 
 /**
- * A poster tile with Plex-style watch state: an in-progress strip along the
- * poster's bottom edge, a check for fully watched items, and the remaining
- * episode count on containers. Browsable items show a chevron.
+ * A poster tile with Plex-style watch state: an inset rounded progress pill
+ * near the poster's bottom for in-progress items, a check for fully watched,
+ * and the remaining-episode count on containers. Heading shows the show title
+ * for episodes (Continue Watching), the item title otherwise; the line below
+ * is "S2 · E1" for episodes and the year for movies.
  */
-export function MediaCard({ item, onOpen }: MediaCardProps) {
+export function MediaCard({ item, onOpen, onLongPress }: MediaCardProps) {
   const progress =
     item.progressMs && item.durationMs ? (item.progressMs / item.durationMs) * 100 : 0;
 
+  const heading = item.showTitle ?? item.title;
+  const line = item.subtitle ?? (item.year != null ? String(item.year) : null);
+  const press = useLongPress(() => onOpen(item), () => onLongPress(item));
+  const [loaded, setLoaded] = useState(false);
+
   return (
-    <button
-      onClick={() => onOpen(item)}
-      className="group flex flex-col text-left focus:outline-none"
+    <div
+      role="button"
+      tabIndex={0}
+      {...press}
+      style={{ touchAction: 'pan-y', WebkitTouchCallout: 'none' }}
+      className="group flex cursor-pointer flex-col text-left focus:outline-none"
     >
       <div className="relative aspect-2/3 w-full overflow-hidden rounded-lg bg-secondary ring-1 ring-border transition group-active:scale-[0.97]">
         {item.thumbUrl ? (
-          <img src={item.thumbUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+          <>
+            {/* Skeleton shimmer until the poster paints, then fade it in. */}
+            {!loaded && <div className="absolute inset-0 animate-pulse bg-muted" />}
+            <img
+              src={item.thumbUrl}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              onLoad={() => setLoaded(true)}
+              className={cn(
+                'h-full w-full object-cover transition-opacity duration-500',
+                loaded ? 'opacity-100' : 'opacity-0',
+              )}
+            />
+          </>
         ) : (
           <div className="flex h-full items-center justify-center px-2 text-center text-xs text-muted-foreground">
-            {item.title}
+            {heading}
           </div>
         )}
 
@@ -48,22 +75,16 @@ export function MediaCard({ item, onOpen }: MediaCardProps) {
           </Badge>
         ) : null}
 
+        {/* Inset rounded progress pill with a track, Plex-style. */}
         {progress > 0 && (
-          <Progress
-            value={progress}
-            className="absolute inset-x-0 bottom-0 h-1 rounded-none bg-black/50"
-          />
+          <div className="absolute inset-x-2 bottom-2 h-1 overflow-hidden rounded-full bg-black/55 backdrop-blur-sm">
+            <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
+          </div>
         )}
       </div>
-      <TitleMarquee
-        text={item.showTitle ?? item.title}
-        className="mt-1.5 w-full text-sm font-medium"
-      />
-      {(item.showTitle ? item.subtitle : item.subtitle || item.year) && (
-        <p className="line-clamp-1 text-xs text-muted-foreground">
-          {item.showTitle ? item.subtitle : (item.subtitle ?? item.year)}
-        </p>
-      )}
-    </button>
+
+      <TitleMarquee text={heading} className="mt-1.5 w-full text-sm font-medium" />
+      {line && <p className="line-clamp-1 text-xs text-muted-foreground">{line}</p>}
+    </div>
   );
 }

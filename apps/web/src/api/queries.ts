@@ -130,6 +130,20 @@ export function usePlaybackState(clientId: string | undefined) {
   });
 }
 
+/** Mark an item watched/unwatched; refreshes Continue Watching + content. */
+export function useSetWatched() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { serverId: string; ratingKey: string; watched: boolean }) =>
+      api.post(`/servers/${v.serverId}/items/${v.ratingKey}/watched`, { watched: v.watched }),
+    onSuccess: () => {
+      for (const key of ['ondeck', 'everything', 'all-items', 'items', 'children']) {
+        void qc.invalidateQueries({ queryKey: [key] });
+      }
+    },
+  });
+}
+
 export function useCast(clientId: string | undefined) {
   return useMutation({
     mutationFn: (vars: {

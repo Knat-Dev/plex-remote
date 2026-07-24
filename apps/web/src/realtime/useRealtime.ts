@@ -27,6 +27,8 @@ export function useRealtime(): void {
   const activeClientId = usePlayerStore((s) => s.activeClientId);
   const socketRef = useRef<WebSocket | null>(null);
   const watchedRef = useRef<string | undefined>(undefined);
+  // Last seen status per player, to detect the play→stop transition.
+  const statusRef = useRef<Record<string, PlaybackStateDto['status']>>({});
 
   // One connection for the app's lifetime, with reconnect.
   useEffect(() => {
@@ -56,6 +58,18 @@ export function useRealtime(): void {
         if (msg.type === 'players') {
           qc.setQueryData(['players'], msg.players);
         } else if (msg.type === 'state') {
+          // A finished/stopped session changes watch state (Continue Watching,
+          // progress strips, watched badges) — refetch content once, on the
+          // play→stop edge, so those views self-heal without polling.
+          const prev = statusRef.current[msg.clientId];
+          statusRef.current[msg.clientId] = msg.state.status;
+          if (prev && prev !== 'stopped' && msg.state.status === 'stopped') {
+            void qc.invalidateQueries({ queryKey: ['ondeck'] });
+            void qc.invalidateQueries({ queryKey: ['everything'] });
+            void qc.invalidateQueries({ queryKey: ['all-items'] });
+            void qc.invalidateQueries({ queryKey: ['items'] });
+            void qc.invalidateQueries({ queryKey: ['children'] });
+          }
           // Respect the optimistic hold: don't let a socket frame overwrite a
           // just-issued command's predicted state.
           if (pollHold.remainingMs() > 0) return;

@@ -62,8 +62,9 @@ function unwatchedCount(item: MediaItem): number | null {
 
 function subtitleOf(item: MediaItem): string | null {
   if (item.type === 'episode') {
-    const code = item.index !== undefined ? `Episode ${item.index}` : '';
-    return [item.parentTitle, code].filter(Boolean).join(' · ') || null;
+    const s = item.seasonIndex !== undefined ? `S${item.seasonIndex}` : '';
+    const e = item.index !== undefined ? `E${item.index}` : '';
+    return [s, e].filter(Boolean).join(' · ') || item.parentTitle || null;
   }
   return item.parentTitle ?? null;
 }

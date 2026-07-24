@@ -14,6 +14,8 @@ export interface ContentGateway {
   listChildren(serverId: string, ratingKey: string): Promise<MediaItem[]>;
   /** Metadata for a single item, or undefined when it no longer exists. */
   getItem(serverId: string, ratingKey: string): Promise<MediaItem | undefined>;
+  /** Mark watched (removes from Continue Watching) or unwatched. */
+  setWatched(serverId: string, ratingKey: string, watched: boolean): Promise<void>;
   search(serverId: string, query: string): Promise<MediaItem[]>;
   /** "Continue Watching" — in-progress items and next-up episodes. */
   listOnDeck(serverId: string): Promise<MediaItem[]>;

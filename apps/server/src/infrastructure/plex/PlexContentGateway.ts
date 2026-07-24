@@ -76,6 +76,18 @@ export class PlexContentGateway implements ContentGateway {
     return (data.MediaContainer?.Metadata ?? []).map(toMediaItem);
   }
 
+  async setWatched(serverId: string, ratingKey: string, watched: boolean): Promise<void> {
+    const base = await this.registry.baseUrl(serverId);
+    const token = await this.tokens.get();
+    const path = watched ? '/:/scrobble' : '/:/unscrobble';
+    await this.http.raw(`${base}${path}`, {
+      headers: plexHeaders(this.env, token),
+      query: { identifier: 'com.plexapp.plugins.library', key: ratingKey },
+      timeoutMs: this.env.requestTimeoutMs,
+      retries: 1,
+    });
+  }
+
   async search(serverId: string, query: string): Promise<MediaItem[]> {
     const data = await this.#get<Container<MetadataDto>>(serverId, '/hubs/search', {
       query,

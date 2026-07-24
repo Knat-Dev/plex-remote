@@ -11,6 +11,7 @@ export interface MetadataDto {
   summary?: string;
   duration?: number;
   index?: number;
+  parentIndex?: number;
   parentTitle?: string;
   grandparentTitle?: string;
   viewOffset?: number;
@@ -47,6 +48,7 @@ export function toMediaItem(dto: MetadataDto): MediaItem {
     ...(dto.summary !== undefined ? { summary: dto.summary } : {}),
     ...(dto.duration !== undefined ? { durationMs: dto.duration } : {}),
     ...(dto.index !== undefined ? { index: dto.index } : {}),
+    ...(dto.parentIndex !== undefined ? { seasonIndex: dto.parentIndex } : {}),
     ...(dto.parentTitle !== undefined ? { parentTitle: dto.parentTitle } : {}),
     ...(dto.grandparentTitle !== undefined ? { grandparentTitle: dto.grandparentTitle } : {}),
     browsable: BROWSABLE.has(type),

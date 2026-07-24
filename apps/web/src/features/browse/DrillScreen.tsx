@@ -3,7 +3,7 @@ import { ChevronLeft, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { VirtualPosterGrid } from '../../components/VirtualPosterGrid.tsx';
 import { PosterSkeleton } from '../../components/PosterSkeleton.tsx';
-import { useCastFlow } from './useCastFlow.tsx';
+import { useItemActions } from './useItemActions.tsx';
 import { useChildren } from '../../api/queries.ts';
 
 const routeApi = getRouteApi('/browse/$serverId/$ratingKey');
@@ -16,7 +16,7 @@ export function DrillScreen() {
   const { serverId, ratingKey } = routeApi.useParams();
   const { t: title } = routeApi.useSearch();
   const router = useRouter();
-  const { open, drawer } = useCastFlow();
+  const { open, longPress, drawer } = useItemActions();
 
   const children = useChildren(serverId, ratingKey);
 
@@ -46,7 +46,7 @@ export function DrillScreen() {
           Nothing here
         </p>
       ) : (
-        <VirtualPosterGrid items={children.data} onOpen={open} />
+        <VirtualPosterGrid items={children.data} onOpen={open} onLongPress={longPress} />
       )}
 
       {drawer}

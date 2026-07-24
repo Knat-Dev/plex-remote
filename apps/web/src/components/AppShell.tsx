@@ -20,7 +20,10 @@ export function AppShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
-    <div className="mx-auto flex h-dvh max-w-lg flex-col overflow-hidden">
+    <div
+      className="mx-auto flex max-w-lg flex-col overflow-hidden"
+      style={{ height: 'var(--app-height, 100dvh)' }}
+    >
       <AppHeader />
 
       <main className="flex min-h-0 flex-1 flex-col pt-3">

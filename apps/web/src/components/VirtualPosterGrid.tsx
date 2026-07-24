@@ -6,6 +6,7 @@ import { MediaCard } from './MediaCard.tsx';
 interface VirtualPosterGridProps {
   items: MediaItemDto[];
   onOpen: (item: MediaItemDto) => void;
+  onLongPress: (item: MediaItemDto) => void;
 }
 
 const GAP = 12;
@@ -16,7 +17,7 @@ const TEXT_BLOCK = 44; // title + subtitle under the poster
  * mounted, so a 5000-item library scrolls like a 20-item one. The component
  * owns its scroll container; columns adapt to the measured width.
  */
-export function VirtualPosterGrid({ items, onOpen }: VirtualPosterGridProps) {
+export function VirtualPosterGrid({ items, onOpen, onLongPress }: VirtualPosterGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
 
@@ -64,7 +65,7 @@ export function VirtualPosterGrid({ items, onOpen }: VirtualPosterGridProps) {
               {items
                 .slice(row.index * columns, row.index * columns + columns)
                 .map((item) => (
-                  <MediaCard key={item.ratingKey} item={item} onOpen={onOpen} />
+                  <MediaCard key={item.ratingKey} item={item} onOpen={onOpen} onLongPress={onLongPress} />
                 ))}
             </div>
           ))}

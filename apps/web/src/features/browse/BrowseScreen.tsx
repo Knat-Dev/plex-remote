@@ -13,7 +13,7 @@ import {
 import { VirtualPosterGrid } from '../../components/VirtualPosterGrid.tsx';
 import { PosterSkeleton } from '../../components/PosterSkeleton.tsx';
 import { SearchBar } from './SearchBar.tsx';
-import { useCastFlow } from './useCastFlow.tsx';
+import { useItemActions } from './useItemActions.tsx';
 import {
   useAllItems,
   useEverything,
@@ -42,7 +42,7 @@ export function BrowseScreen() {
   // you stopped. server=All by default.
   const { server = ALL, lib = ONDECK, q = '' } = routeApi.useSearch();
   const navigate = routeApi.useNavigate();
-  const { open, drawer } = useCastFlow();
+  const { open, longPress, drawer } = useItemActions();
 
   const isAllServers = server === ALL;
   const { data: servers } = useServers();
@@ -156,7 +156,7 @@ export function BrowseScreen() {
               : 'Nothing here'}
         </p>
       ) : (
-        <VirtualPosterGrid items={visibleItems} onOpen={open} />
+        <VirtualPosterGrid items={visibleItems} onOpen={open} onLongPress={longPress} />
       )}
 
       {drawer}

@@ -22,6 +22,15 @@ export function registerLibraryRoutes(app: FastifyInstance, c: Container): void 
     return entries.map(({ serverId, item }) => mediaItemDto(serverId, item));
   });
 
+  app.post<{ Params: ServerParams & { ratingKey: string }; Body: { watched?: boolean } }>(
+    '/api/servers/:serverId/items/:ratingKey/watched',
+    async (req) => {
+      const watched = req.body?.watched !== false;
+      await c.browseContent.setWatched(req.params.serverId, req.params.ratingKey, watched);
+      return { ok: true };
+    },
+  );
+
   app.get('/api/ondeck', async () => {
     const entries = await c.browseContent.onDeckEverywhere();
     return entries.map(({ serverId, item }) => mediaItemDto(serverId, item));

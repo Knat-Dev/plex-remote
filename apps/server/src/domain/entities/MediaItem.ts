@@ -23,6 +23,8 @@ export interface MediaItem {
   readonly summary?: string;
   readonly durationMs?: number;
   readonly index?: number;
+  /** Season number for episodes (parentIndex). */
+  readonly seasonIndex?: number;
   readonly parentTitle?: string;
   readonly grandparentTitle?: string;
   /** True when this item can be opened to reveal children (show, season, library…). */
