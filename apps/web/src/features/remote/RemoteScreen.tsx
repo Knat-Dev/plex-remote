@@ -19,7 +19,7 @@ export function RemoteScreen() {
 
   if (!isReady || !player) {
     return (
-      <p className="py-16 text-center text-sm text-muted-foreground">
+      <p className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
         Select a player from the Players tab to begin.
       </p>
     );
@@ -31,7 +31,7 @@ export function RemoteScreen() {
     !isIdle && nowPlaying && nowPlaying.ratingKey === state?.ratingKey ? nowPlaying : undefined;
 
   return (
-    <div className="flex flex-col gap-5 px-4 pb-4">
+    <div className="flex flex-1 flex-col gap-5 px-4 pb-4">
       {art ? (
         <div className="relative overflow-hidden rounded-xl ring-1 ring-border">
           {art.artUrl && (
@@ -67,7 +67,7 @@ export function RemoteScreen() {
         </Card>
       )}
 
-      <Tabs defaultValue="playback">
+      <Tabs defaultValue="playback" className="flex flex-1 flex-col">
         {player.canNavigate && (
           <TabsList className="w-full rounded-full">
             <TabsTrigger value="playback" className="flex-1 rounded-full">
@@ -79,9 +79,11 @@ export function RemoteScreen() {
           </TabsList>
         )}
 
-        <TabsContent value="playback" className="mt-5 flex flex-col gap-5">
+        {/* justify-evenly distributes the controls over the full remaining
+            height — a remote should fill the hand, not top-stack. */}
+        <TabsContent value="playback" className="flex flex-1 flex-col justify-evenly gap-4 py-2">
           {isIdle ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
+            <p className="text-center text-sm text-muted-foreground">
               Nothing playing. Pick something from Browse to cast.
             </p>
           ) : (
@@ -102,7 +104,7 @@ export function RemoteScreen() {
           {!isIdle && <StopButton onCommand={(c) => commands.playback.mutate(c)} />}
         </TabsContent>
 
-        <TabsContent value="navigate" className="mt-5">
+        <TabsContent value="navigate" className="flex flex-1 items-center justify-center">
           <DPad onNavigate={(a) => commands.navigate.mutate(a)} />
         </TabsContent>
       </Tabs>

@@ -26,14 +26,14 @@ export function App() {
     >
       <AppHeader onLogo={() => setTab('browse')} onOpenPlayers={() => setTab('players')} />
 
-      <main className="flex-1 pt-3">
-        <TabsContent value="browse">
+      <main className="flex flex-1 flex-col pt-3">
+        <TabsContent value="browse" className="flex-1">
           <BrowseScreen onCasted={() => setTab('remote')} />
         </TabsContent>
-        <TabsContent value="remote">
+        <TabsContent value="remote" className="flex flex-1 flex-col">
           <RemoteScreen />
         </TabsContent>
-        <TabsContent value="players">
+        <TabsContent value="players" className="flex-1">
           <PlayersScreen onSelected={() => setTab('remote')} />
         </TabsContent>
       </main>

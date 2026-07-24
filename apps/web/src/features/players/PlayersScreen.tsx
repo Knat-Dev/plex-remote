@@ -25,7 +25,7 @@ export function PlayersScreen({ onSelected }: PlayersScreenProps) {
   }
   if (!players || players.length === 0) {
     return (
-      <p className="py-16 text-center text-sm text-muted-foreground">
+      <p className="flex h-full items-center justify-center text-sm text-muted-foreground">
         No players found on your network.
       </p>
     );
