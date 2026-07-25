@@ -21,8 +21,22 @@ interface ClientsContainer {
  * Aggregates players from every reachable server's `/clients` endpoint.
  * A player is keyed by clientId; the first server that reports it becomes the
  * relay used to route its commands (`viaServerId`).
+ *
+ * Plex's `/clients` is unreliable: a live player (Android TV / SHIELD notably)
+ * intermittently drops out of a single response as its GDM announce expires and
+ * re-registers, even though it is perfectly reachable. Resolving a command
+ * against a fresh `/clients` hit therefore fails at random ("buttons do
+ * nothing"), and the presence list flickers players in and out. So we keep a
+ * short-lived presence cache: a player stays "present" until it has been ABSENT
+ * for longer than the grace window, which bridges the blips while still
+ * dropping a genuinely-closed player within a few seconds. Commands additionally
+ * fall back to the last-known entry beyond the window — sending to a stale relay
+ * harmlessly no-ops, which is strictly better than a 500.
  */
 export class PlexPlayerDirectory implements PlayerDirectory {
+  readonly #seen = new Map<string, { player: Player; at: number }>();
+  static readonly #PRESENCE_TTL_MS = 15_000;
+
   constructor(
     private readonly env: Environment,
     private readonly tokens: TokenProvider,
@@ -31,6 +45,30 @@ export class PlexPlayerDirectory implements PlayerDirectory {
   ) {}
 
   async listPlayers(): Promise<Player[]> {
+    const fresh = await this.#fetchPlayers();
+    const now = Date.now();
+    for (const player of fresh) this.#seen.set(player.clientId, { player, at: now });
+    for (const [id, entry] of this.#seen) {
+      if (now - entry.at > PlexPlayerDirectory.#PRESENCE_TTL_MS) this.#seen.delete(id);
+    }
+    return [...this.#seen.values()].map((entry) => entry.player);
+  }
+
+  async findPlayer(clientId: string): Promise<Player | undefined> {
+    const cached = this.#seen.get(clientId);
+    if (cached && Date.now() - cached.at < PlexPlayerDirectory.#PRESENCE_TTL_MS) {
+      return cached.player;
+    }
+    // Unknown or stale — refresh once, then look again.
+    await this.listPlayers();
+    const refreshed = this.#seen.get(clientId);
+    if (refreshed) return refreshed.player;
+    // Never in this refresh, but if we ever saw it, resolve best-effort so a
+    // command targets its last-known relay instead of throwing NotFound.
+    return cached?.player;
+  }
+
+  async #fetchPlayers(): Promise<Player[]> {
     const servers = await this.registry.servers();
     const perServer = await Promise.allSettled(
       servers.map((s) => this.#clientsOf(s.id)),
@@ -51,10 +89,6 @@ export class PlexPlayerDirectory implements PlayerDirectory {
       }
     });
     return [...byId.values()].map(freeze);
-  }
-
-  async findPlayer(clientId: string): Promise<Player | undefined> {
-    return (await this.listPlayers()).find((p) => p.clientId === clientId);
   }
 
   async #clientsOf(serverId: string): Promise<ClientDto[]> {

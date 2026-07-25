@@ -99,3 +99,17 @@
 @utility safe-bottom {
   padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
 }
+
+/*
+ * App shell height, CSS-only (no JS viewport measurement — that pinned a stale
+ * height on iOS PWA launch and left the footer short of the screen bottom).
+ * In an installed standalone PWA there is no dynamic browser toolbar, so the
+ * viewport IS the full screen: 100dvh fills it exactly and recomputes on
+ * rotation. 100svh/100vh is the fallback for iOS versions without dvh; in
+ * standalone all three equal the full screen. viewport-fit=cover + the header's
+ * safe-top / footer's safe-bottom handle the notch and home indicator.
+ */
+@utility app-shell {
+  height: 100vh;
+  height: 100dvh;
+}

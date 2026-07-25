@@ -1,6 +1,7 @@
 import { Link, Outlet, useRouterState } from '@tanstack/react-router';
 import { LayoutGrid, Gamepad2, Tv } from 'lucide-react';
 import { useRealtime } from '../realtime/useRealtime.ts';
+import { useAutoSelectPlayer } from '../hooks/useAutoSelectPlayer.ts';
 import { AppHeader } from './AppHeader.tsx';
 import { NowPlayingBar } from './NowPlayingBar.tsx';
 
@@ -17,13 +18,11 @@ const NAV = [
  */
 export function AppShell() {
   useRealtime();
+  useAutoSelectPlayer();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
-    <div
-      className="mx-auto flex max-w-lg flex-col overflow-hidden"
-      style={{ height: 'var(--app-height, 100dvh)' }}
-    >
+    <div className="app-shell mx-auto flex max-w-lg flex-col overflow-hidden">
       <AppHeader />
 
       <main className="flex min-h-0 flex-1 flex-col pt-3">

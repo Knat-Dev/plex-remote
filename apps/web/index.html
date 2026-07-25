@@ -11,22 +11,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Plex Remote</title>
-    <script>
-      // iOS Safari's 100dvh can lock to a stale toolbar state, leaving the app
-      // shorter than the screen. Drive the shell height off the live visual
-      // viewport instead — always the currently-visible area (also shrinks for
-      // the keyboard, keeping content above it). Runs before paint, no flash.
-      (function () {
-        function setAppHeight() {
-          var h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
-          document.documentElement.style.setProperty('--app-height', h + 'px');
-        }
-        setAppHeight();
-        if (window.visualViewport) window.visualViewport.addEventListener('resize', setAppHeight);
-        window.addEventListener('resize', setAppHeight);
-        window.addEventListener('orientationchange', setAppHeight);
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>

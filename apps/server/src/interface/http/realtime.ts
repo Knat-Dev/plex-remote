@@ -30,6 +30,12 @@ export async function registerRealtime(app: FastifyInstance, c: Container): Prom
       send({ type: 'players', players: players.map(playerDto) }),
     );
 
+    // Application-level heartbeat: keeps the connection off any proxy idle
+    // timeout and gives the client a steady signal to prove the socket is
+    // alive. A protocol-level ping frame would not reach the browser's
+    // onmessage, so this is a plain JSON tick the client watches for.
+    const heartbeat = setInterval(() => send({ type: 'ping' }), 15_000);
+
     let unwatch: (() => void) | undefined;
     socket.on('message', (raw: Buffer) => {
       let message;
@@ -49,6 +55,7 @@ export async function registerRealtime(app: FastifyInstance, c: Container): Prom
     });
 
     socket.on('close', () => {
+      clearInterval(heartbeat);
       unsubscribePlayers();
       unwatch?.();
     });
