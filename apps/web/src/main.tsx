@@ -1,6 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { RouterProvider } from '@tanstack/react-router';
 import { router } from './router.tsx';
 import { Toaster } from '@/components/ui/sonner';
@@ -14,6 +16,8 @@ const queryClient = new QueryClient({
       retry: 2,
       retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
       staleTime: 15_000,
+      // Survive long enough to be persisted and rehydrated on the next open.
+      gcTime: 1000 * 60 * 60 * 24,
       refetchOnWindowFocus: true,
       // 'always' — never pause on the online/offline signal. When iOS suspends
       // a backgrounded PWA, navigator.onLine can read false; the default
@@ -31,14 +35,34 @@ const queryClient = new QueryClient({
   },
 });
 
+// Persist the small, high-value queries to localStorage so reopening the app
+// paints the last-known player + Continue Watching INSTANTLY, then revalidates
+// in the background — instead of a blank screen while a fresh fetch rides a
+// stale iOS connection. Deliberately excludes big library lists (they'd blow
+// the storage quota); those still load fresh.
+const PERSISTED_KEYS = new Set(['players', 'servers', 'users', 'ondeck']);
+const persister = createSyncStoragePersister({
+  storage: window.localStorage,
+  key: 'plex-remote-query-cache',
+});
+
 const root = document.getElementById('root');
 if (!root) throw new Error('Missing #root element');
 
 createRoot(root).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: 1000 * 60 * 60 * 24,
+        dehydrateOptions: {
+          shouldDehydrateQuery: (query) => PERSISTED_KEYS.has(String(query.queryKey[0])),
+        },
+      }}
+    >
       <RouterProvider router={router} />
       <Toaster position="top-center" theme="dark" />
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   </StrictMode>,
 );
