@@ -54,10 +54,27 @@ function registerErrorHandler(app: FastifyInstance): void {
 }
 
 function statusFor(error: unknown): number {
+  // An explicit statusCode wins (our domain errors carry one). This is immune
+  // to the cross-module `instanceof` failures that can occur under ESM, where
+  // a NotFoundError was being mapped to 500 instead of 404.
+  if (
+    error &&
+    typeof error === 'object' &&
+    'statusCode' in error &&
+    typeof (error as { statusCode: unknown }).statusCode === 'number'
+  ) {
+    return (error as { statusCode: number }).statusCode;
+  }
   if (error instanceof ZodError) return 400;
   if (error instanceof ValidationError) return 400;
   if (error instanceof NotFoundError) return 404;
   if (error instanceof PlexHttpError) return error.status >= 500 ? 502 : error.status;
+  // Name-based fallback: survives any dual-class / error-wrapping edge case.
+  if (error instanceof Error) {
+    if (error.name === 'NotFoundError') return 404;
+    if (error.name === 'ValidationError') return 400;
+    if (error.name === 'ZodError') return 400;
+  }
   return 500;
 }
 
