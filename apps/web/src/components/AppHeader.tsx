@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 /** Sticky title bar; logo returns to Browse, live player chip opens Players. */
 export function AppHeader() {
   const { player, state } = useActivePlayer();
+  const connected = Boolean(player);
   const playing = state?.status === 'playing' || state?.status === 'buffering';
 
   return (
@@ -19,11 +20,16 @@ export function AppHeader() {
       <div className="flex items-center gap-2">
         <Button variant="secondary" size="sm" asChild className="rounded-full">
           <Link to="/players">
-            <span className={cn('relative flex size-2', !playing && 'opacity-40')}>
-              {playing && (
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+            <span className="relative flex size-2">
+              {connected && playing && (
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
               )}
-              <span className="relative inline-flex size-2 rounded-full bg-primary" />
+              <span
+                className={cn(
+                  'relative inline-flex size-2 rounded-full',
+                  connected ? 'bg-emerald-500' : 'bg-muted-foreground/40',
+                )}
+              />
             </span>
             <Tv className="size-4 text-muted-foreground" />
             <span className="max-w-24 truncate">{player?.name ?? 'No player'}</span>

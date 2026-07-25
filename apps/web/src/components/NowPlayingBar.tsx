@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { TitleMarquee } from './TitleMarquee.tsx';
+import { Image } from './Image.tsx';
 import { useActivePlayer } from '../hooks/useActivePlayer.ts';
 import { useNowPlayingMeta } from '../hooks/useNowPlayingMeta.ts';
 
@@ -34,11 +35,7 @@ export function NowPlayingBar() {
         }}
         className="flex w-full cursor-pointer items-center gap-3 p-2 pr-3 text-left"
       >
-        {meta?.thumbUrl ? (
-          <img src={meta.thumbUrl} alt="" className="size-11 shrink-0 rounded-lg object-cover" />
-        ) : (
-          <div className="size-11 shrink-0 rounded-lg bg-card" />
-        )}
+        <Image src={meta?.thumbUrl ?? null} className="size-11 shrink-0 rounded-lg bg-card" />
         <div className="min-w-0 flex-1">
           <TitleMarquee text={meta?.title ?? 'Now playing'} className="text-sm font-medium" />
           <p className="truncate text-xs text-muted-foreground">on {player.name}</p>

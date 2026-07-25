@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { api } from '../api/client.ts';
 import { pollHold } from '../api/optimistic.ts';
 import type { PlaybackStateDto, PlayerDto } from '../api/types.ts';
 import { usePlayerStore } from '../state/usePlayerStore.ts';
@@ -149,6 +150,10 @@ export function useRealtime(): void {
     // Foreground/network wake: reconnect now instead of on the backoff timer.
     const wake = () => {
       if (closed) return;
+      // Warm the HTTP connection so the FIRST command after resume rides a live
+      // socket, not a stale one the browser hasn't noticed is dead yet. Cheap,
+      // fire-and-forget; failure just means the real request re-dials.
+      void api.get('/health', { timeoutMs: 4000 }).catch(() => undefined);
       const socket = socketRef.current;
       if (
         !socket ||
@@ -175,6 +180,9 @@ export function useRealtime(): void {
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('focus', wake);
     window.addEventListener('online', wake);
+    // iOS restores a backgrounded PWA from the bfcache, firing pageshow (often
+    // without focus/visibility) — treat it as a resume too.
+    window.addEventListener('pageshow', wake);
 
     connect();
     return () => {
@@ -184,6 +192,7 @@ export function useRealtime(): void {
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('focus', wake);
       window.removeEventListener('online', wake);
+      window.removeEventListener('pageshow', wake);
       socketRef.current?.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TitleMarquee } from '../../components/TitleMarquee.tsx';
+import { Image } from '../../components/Image.tsx';
 import { useActivePlayer } from '../../hooks/useActivePlayer.ts';
 import { useNowPlayingMeta } from '../../hooks/useNowPlayingMeta.ts';
 import { Scrubber } from './Scrubber.tsx';
@@ -44,11 +45,7 @@ export function RemoteScreen() {
           )}
           <div className="relative flex items-center gap-4 p-4">
             {art.thumbUrl && (
-              <img
-                src={art.thumbUrl}
-                alt=""
-                className="h-24 w-16 shrink-0 rounded-lg object-cover shadow-lg"
-              />
+              <Image src={art.thumbUrl} className="h-24 w-16 shrink-0 rounded-lg shadow-lg" />
             )}
             <div className="min-w-0 flex-1">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">

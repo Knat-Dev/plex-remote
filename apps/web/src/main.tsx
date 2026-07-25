@@ -15,6 +15,18 @@ const queryClient = new QueryClient({
       retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
       staleTime: 15_000,
       refetchOnWindowFocus: true,
+      // 'always' — never pause on the online/offline signal. When iOS suspends
+      // a backgrounded PWA, navigator.onLine can read false; the default
+      // 'online' mode would then PAUSE fetches and fire them in a burst when it
+      // flips back. We want each request to go out the instant it's made and
+      // succeed or fail on its own (see request timeouts in the api client).
+      networkMode: 'always',
+    },
+    mutations: {
+      // Same reason, and this is the one that matters for controls: a paused
+      // mutation is a button press that does nothing now and then replays late
+      // in a burst. 'always' makes every command fire immediately on click.
+      networkMode: 'always',
     },
   },
 });

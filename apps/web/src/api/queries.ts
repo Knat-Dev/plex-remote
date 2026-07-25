@@ -206,20 +206,20 @@ export function usePlayerCommands(clientId: string | undefined) {
 
   return {
     playback: optimistic(
-      (command: PlaybackCommandDto) => api.post(`/players/${clientId}/playback`, { command }),
+      (command: PlaybackCommandDto) => api.command(`/players/${clientId}/playback`, { command }),
       predictPlayback,
     ),
     seek: optimistic(
-      (offsetMs: number) => api.post(`/players/${clientId}/seek`, { offsetMs }),
+      (offsetMs: number) => api.command(`/players/${clientId}/seek`, { offsetMs }),
       predictSeek,
     ),
     volume: optimistic(
-      (level: number) => api.post(`/players/${clientId}/volume`, { level }),
+      (level: number) => api.command(`/players/${clientId}/volume`, { level }),
       predictVolume,
     ),
     navigate: useMutation({
       mutationFn: (action: NavigationActionDto) =>
-        api.post(`/players/${clientId}/navigate`, { action }),
+        api.command(`/players/${clientId}/navigate`, { action }),
     }),
   };
 }

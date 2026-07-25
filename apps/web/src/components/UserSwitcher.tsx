@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/drawer';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { Image } from './Image.tsx';
 import { useSetActiveUser, useUsers } from '../api/queries.ts';
 
 /**
@@ -27,13 +28,13 @@ export function UserSwitcher() {
       <button
         onClick={() => setOpen(true)}
         aria-label="Switch user"
-        className="flex size-8 items-center justify-center overflow-hidden rounded-full bg-secondary ring-1 ring-border"
+        className="size-8 overflow-hidden rounded-full bg-secondary ring-1 ring-border"
       >
-        {active?.thumb ? (
-          <img src={active.thumb} alt="" className="size-full object-cover" />
-        ) : (
-          <User className="size-4 text-muted-foreground" />
-        )}
+        <Image
+          src={active?.thumb ?? null}
+          className="h-full w-full"
+          fallback={<User className="size-4 text-muted-foreground" />}
+        />
       </button>
 
       <Drawer open={open} onOpenChange={setOpen}>
@@ -54,12 +55,12 @@ export function UserSwitcher() {
                   }}
                   className="flex items-center gap-3 px-5 py-3 text-left transition active:bg-accent"
                 >
-                  <span className="flex size-9 items-center justify-center overflow-hidden rounded-full bg-secondary ring-1 ring-border">
-                    {user.thumb ? (
-                      <img src={user.thumb} alt="" className="size-full object-cover" />
-                    ) : (
-                      <User className="size-4 text-muted-foreground" />
-                    )}
+                  <span className="size-9 overflow-hidden rounded-full bg-secondary ring-1 ring-border">
+                    <Image
+                      src={user.thumb ?? null}
+                      className="h-full w-full"
+                      fallback={<User className="size-4 text-muted-foreground" />}
+                    />
                   </span>
                   <span className={cn('flex-1', isActive && 'font-semibold')}>{user.title}</span>
                   {isActive && <Check className="size-5 text-primary" />}
