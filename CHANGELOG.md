@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/Knat-Dev/plex-remote/compare/v1.3.0...v1.4.0) (2026-07-25)
+
+
+### Features
+
+* bulletproof realtime + auto-connect; fix iOS PWA full-height ([487aa62](https://github.com/Knat-Dev/plex-remote/commit/487aa62bd110f2384150aa68dce95d83237e3ccc))
+
 ## [1.3.0](https://github.com/Knat-Dev/plex-remote/compare/v1.2.0...v1.3.0) (2026-07-24)
 
 
