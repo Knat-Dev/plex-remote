@@ -101,16 +101,17 @@
 }
 
 /*
- * App shell height. Uses the plain percentage chain (html, body, #root are all
- * height:100%) rather than 100dvh: in an installed standalone PWA the document
- * IS the full screen, so 100% equals it exactly AND is static — it never
- * recomputes. 100dvh is "dynamic" and iOS can re-evaluate it on app-switch /
- * notification / control-center events, intermittently returning a slightly
- * wrong value (the flaky short/tall shell). 100vh is a fallback for any context
- * where the chain isn't definite. viewport-fit=cover + the header's safe-top /
- * footer's safe-bottom handle the notch and home indicator.
+ * App shell height — plain 100vh, deliberately NOT 100dvh or 100%. This is a
+ * known iOS standalone-PWA bug (verified against the reported symptoms):
+ *   - 100dvh reports the WRONG value on a cold PWA launch and only corrects
+ *     after a portrait→landscape→portrait rotation → the "flaky" short/tall.
+ *   - height:100% (percentage) does NOT account for the area behind the status
+ *     bar / Dynamic Island under black-translucent + viewport-fit=cover, so the
+ *     shell is consistently short → the "always bad" footer-off-the-bottom.
+ * In standalone there is no browser toolbar, so 100vh has no vh/dvh discrepancy
+ * and is the one unit correct FROM COLD START. viewport-fit=cover + the header's
+ * safe-top / footer's safe-bottom keep content clear of the notch and home bar.
  */
 @utility app-shell {
   height: 100vh;
-  height: 100%;
 }
