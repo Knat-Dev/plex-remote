@@ -101,15 +101,16 @@
 }
 
 /*
- * App shell height, CSS-only (no JS viewport measurement — that pinned a stale
- * height on iOS PWA launch and left the footer short of the screen bottom).
- * In an installed standalone PWA there is no dynamic browser toolbar, so the
- * viewport IS the full screen: 100dvh fills it exactly and recomputes on
- * rotation. 100svh/100vh is the fallback for iOS versions without dvh; in
- * standalone all three equal the full screen. viewport-fit=cover + the header's
- * safe-top / footer's safe-bottom handle the notch and home indicator.
+ * App shell height. Uses the plain percentage chain (html, body, #root are all
+ * height:100%) rather than 100dvh: in an installed standalone PWA the document
+ * IS the full screen, so 100% equals it exactly AND is static — it never
+ * recomputes. 100dvh is "dynamic" and iOS can re-evaluate it on app-switch /
+ * notification / control-center events, intermittently returning a slightly
+ * wrong value (the flaky short/tall shell). 100vh is a fallback for any context
+ * where the chain isn't definite. viewport-fit=cover + the header's safe-top /
+ * footer's safe-bottom handle the notch and home indicator.
  */
 @utility app-shell {
   height: 100vh;
-  height: 100dvh;
+  height: 100%;
 }
