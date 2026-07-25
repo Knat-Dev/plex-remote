@@ -46,6 +46,21 @@ const persister = createSyncStoragePersister({
   key: 'plex-remote-query-cache',
 });
 
+// Keep the installed PWA current. autoUpdate only re-checks the service worker
+// on a cold load, so an app that's merely backgrounded can serve a stale cached
+// build indefinitely (the "my fix never showed up" trap). Nudge the SW to check
+// for a new version every time the app is foregrounded; with skipWaiting +
+// clientsClaim (autoUpdate) a found update activates and reloads on its own.
+if ('serviceWorker' in navigator) {
+  const checkForUpdate = () => {
+    void navigator.serviceWorker.getRegistration().then((r) => r?.update());
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkForUpdate();
+  });
+  window.addEventListener('focus', checkForUpdate);
+}
+
 const root = document.getElementById('root');
 if (!root) throw new Error('Missing #root element');
 
