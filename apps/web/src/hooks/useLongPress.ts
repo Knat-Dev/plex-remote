@@ -23,6 +23,7 @@ export function useLongPress(
 ): LongPressHandlers {
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const firedLong = useRef(false);
+  const moved = useRef(false);
   const start = useRef<{ x: number; y: number } | null>(null);
 
   const clear = () => {
@@ -35,6 +36,7 @@ export function useLongPress(
     onPointerDown: (e) => {
       if (e.button !== 0 && e.pointerType === 'mouse') return;
       firedLong.current = false;
+      moved.current = false;
       start.current = { x: e.clientX, y: e.clientY };
       timer.current = setTimeout(() => {
         firedLong.current = true;
@@ -44,15 +46,26 @@ export function useLongPress(
     },
     onPointerMove: (e) => {
       if (!start.current) return;
-      const moved = Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y);
-      if (moved > 10) clear(); // scrolling / dragging cancels the press
+      const dist = Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y);
+      // A drag (scroll, pull-to-refresh, swipe) is not a tap or a long-press.
+      // Mark it moved so pointerup can't fire onTap — during pull-to-refresh we
+      // preventDefault the scroll, so the browser never sends pointercancel and
+      // this is the only thing stopping a pull from casting the poster.
+      if (dist > 10) {
+        moved.current = true;
+        clear();
+      }
     },
     onPointerUp: () => {
       const wasLong = firedLong.current;
+      const didMove = moved.current;
       clear();
-      if (!wasLong) onTap();
+      if (!wasLong && !didMove) onTap();
     },
-    onPointerCancel: clear,
+    onPointerCancel: () => {
+      moved.current = true;
+      clear();
+    },
     onContextMenu: (e) => e.preventDefault(),
   };
 }
