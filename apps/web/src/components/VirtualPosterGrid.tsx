@@ -1,10 +1,9 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Loader2 } from 'lucide-react';
+import PullToRefresh from 'react-simple-pull-to-refresh';
+import { ArrowDown, Loader2 } from 'lucide-react';
 import type { MediaItemDto } from '../api/types.ts';
 import { MediaCard } from './MediaCard.tsx';
-import { usePullToRefresh } from '../hooks/usePullToRefresh.ts';
-import { cn } from '@/lib/utils';
 
 interface VirtualPosterGridProps {
   items: MediaItemDto[];
@@ -27,6 +26,11 @@ const SKELETON_COUNT = 12;
  * skeleton (same container, measurement, columns, gap and row height), so the
  * grid element never unmounts between loading and loaded — the swap is
  * pixel-identical with no reflow, remeasure flash or column jump.
+ *
+ * Pull-to-refresh is the battle-tested `react-simple-pull-to-refresh`: it wraps
+ * the scroll container (which keeps scrolling/virtualizing untouched — the lib
+ * only engages at scrollTop 0) and renders the spinner at the top of the
+ * container with a native rubber-band, the way iOS does it.
  */
 export function VirtualPosterGrid({
   items,
@@ -37,12 +41,6 @@ export function VirtualPosterGrid({
 }: VirtualPosterGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
-  const noop = useRef(() => Promise.resolve()).current;
-  const { pull, progress, refreshing, dragging } = usePullToRefresh(
-    scrollRef,
-    onRefresh ?? noop,
-    Boolean(onRefresh),
-  );
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -77,35 +75,13 @@ export function VirtualPosterGrid({
     virtualizer.measure();
   }, [rowHeight, virtualizer]);
 
-  return (
+  const scroller = (
     <div
       ref={scrollRef}
-      className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 [scrollbar-gutter:stable]"
+      className="h-full overflow-y-auto overscroll-contain px-4 [scrollbar-gutter:stable]"
     >
-      {(pull > 0 || refreshing) && (
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center"
-          style={{
-            transform: `translateY(${Math.max(0, pull - 26)}px)`,
-            transition: dragging ? 'none' : 'transform 0.25s ease-out',
-            opacity: refreshing ? 1 : progress,
-          }}
-        >
-          <Loader2
-            className={cn('size-5 text-muted-foreground', refreshing && 'animate-spin')}
-            style={refreshing ? undefined : { transform: `rotate(${progress * 270}deg)` }}
-          />
-        </div>
-      )}
       {width > 0 && (
-        <div
-          className="relative w-full"
-          style={{
-            height: virtualizer.getTotalSize(),
-            transform: pull > 0 ? `translateY(${pull}px)` : undefined,
-            transition: dragging ? 'none' : 'transform 0.25s ease-out',
-          }}
-        >
+        <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
           {virtualizer.getVirtualItems().map((row) => (
             <div
               key={row.key}
@@ -136,6 +112,30 @@ export function VirtualPosterGrid({
       )}
     </div>
   );
+
+  if (!onRefresh) {
+    return <div className="min-h-0 flex-1">{scroller}</div>;
+  }
+
+  return (
+    <div className="min-h-0 flex-1">
+      <PullToRefresh
+        onRefresh={() => Promise.resolve(onRefresh())}
+        pullingContent={<PullHint icon={<ArrowDown className="size-5" />} />}
+        refreshingContent={<PullHint icon={<Loader2 className="size-5 animate-spin" />} />}
+        pullDownThreshold={64}
+        maxPullDownDistance={90}
+        resistance={2}
+      >
+        {scroller}
+      </PullToRefresh>
+    </div>
+  );
+}
+
+/** Themed pull/refresh indicator that reads on the dark background. */
+function PullHint({ icon }: { icon: ReactNode }) {
+  return <div className="flex justify-center py-3 text-muted-foreground">{icon}</div>;
 }
 
 /**
