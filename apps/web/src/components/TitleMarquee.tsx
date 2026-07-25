@@ -15,11 +15,21 @@ const EDGE = 4; // px of overflow tolerance before scrolling kicks in
 const PAUSE_MS = 2000; // dwell at each end
 const TRAVEL_MS = 6000; // one direction of travel
 const TOTAL_MS = 2 * PAUSE_MS + 2 * TRAVEL_MS;
-// Ease applied WITHIN each travel segment (easeInOutCubic): the text glides up
-// to speed and back down instead of jerking on/off. Because it eases per
-// segment inside the shared cycle, every marquee still starts, peaks and stops
-// at the exact same instants — the global sync is untouched.
-const TRAVEL_EASING = 'cubic-bezier(0.65, 0, 0.35, 1)';
+
+// Trapezoidal speed profile per travel: ramp up to full speed over RAMP_MS,
+// hold CONSTANT speed through the middle, ramp back down over RAMP_MS — NOT an
+// ease over the whole trip (that never holds a steady speed). The ramps live at
+// fixed TIME fractions of the shared cycle, so every marquee ramps, cruises and
+// stops in unison; only the distance differs. The cubic-beziers are quadratic
+// accel/decel whose end-slope is exactly 2, which makes the velocity continuous
+// (no jerk) where each ramp meets the constant-speed middle.
+const RAMP_MS = 300;
+const EASE_IN = 'cubic-bezier(0.11, 0, 0.5, 0)'; // v: 0 → full (quadratic)
+const EASE_OUT = 'cubic-bezier(0.5, 1, 0.89, 1)'; // v: full → 0
+// Fraction of the total travel distance covered during one ramp. From constant
+// acceleration: ramp_dist = ½·v·t and cruise v = D/(T−RAMP), so the ratio is
+// ½·RAMP/(T−RAMP). Both ramps + cruise then sum back to exactly D.
+const RAMP_DIST_FRAC = (0.5 * RAMP_MS) / (TRAVEL_MS - RAMP_MS);
 
 /**
  * Spotify-style title marquee: static unless the text overflows; scrolls
@@ -77,20 +87,23 @@ export function TitleMarquee({ text, className, fade = 24 }: TitleMarqueeProps) 
 
       const pause = PAUSE_MS / TOTAL_MS;
       const travel = TRAVEL_MS / TOTAL_MS;
+      const ramp = RAMP_MS / TOTAL_MS;
+      const near = distance * RAMP_DIST_FRAC; // px covered in one ramp
+      const far = distance - near; // where the decel ramp begins
 
       animation = inner.animate(
         [
           // Per-keyframe easing applies to the segment that STARTS at that
-          // keyframe. Dwell segments are linear (no motion); the two travel
-          // segments ease in and out.
-          { transform: 'translateX(0)', offset: 0, easing: 'linear' },
-          { transform: 'translateX(0)', offset: pause, easing: TRAVEL_EASING },
-          { transform: `translateX(-${distance}px)`, offset: pause + travel, easing: 'linear' },
-          {
-            transform: `translateX(-${distance}px)`,
-            offset: pause + travel + pause,
-            easing: TRAVEL_EASING,
-          },
+          // keyframe. Each travel is accel (EASE_IN) → constant (linear) →
+          // decel (EASE_OUT); dwell segments are linear (no motion).
+          { transform: 'translateX(0)', offset: 0, easing: 'linear' }, // dwell
+          { transform: 'translateX(0)', offset: pause, easing: EASE_IN }, // accel →
+          { transform: `translateX(-${near}px)`, offset: pause + ramp, easing: 'linear' }, // cruise →
+          { transform: `translateX(-${far}px)`, offset: pause + travel - ramp, easing: EASE_OUT }, // decel →
+          { transform: `translateX(-${distance}px)`, offset: pause + travel, easing: 'linear' }, // dwell
+          { transform: `translateX(-${distance}px)`, offset: pause + travel + pause, easing: EASE_IN }, // accel ←
+          { transform: `translateX(-${far}px)`, offset: pause + travel + pause + ramp, easing: 'linear' }, // cruise ←
+          { transform: `translateX(-${near}px)`, offset: 1 - ramp, easing: EASE_OUT }, // decel ←
           { transform: 'translateX(0)', offset: 1 },
         ],
         {
