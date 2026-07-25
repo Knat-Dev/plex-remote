@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.7](https://github.com/Knat-Dev/plex-remote/compare/v1.4.6...v1.4.7) (2026-07-25)
+
+
+### Bug Fixes
+
+* PWA checks for updates on foreground so fixes actually ship ([9392588](https://github.com/Knat-Dev/plex-remote/commit/9392588e1ded6564c6593176d939637df44d2e97))
+
 ## [1.4.0](https://github.com/Knat-Dev/plex-remote/compare/v1.3.0...v1.4.0) (2026-07-25)
 
 
