@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { haptic } from '../lib/haptics.ts';
 
 interface LongPressHandlers {
   onPointerDown: (e: React.PointerEvent) => void;
@@ -37,6 +38,7 @@ export function useLongPress(
       start.current = { x: e.clientX, y: e.clientY };
       timer.current = setTimeout(() => {
         firedLong.current = true;
+        haptic(); // Android/Chromium buzz on recognise; no-op on iOS.
         onLongPress();
       }, delayMs);
     },

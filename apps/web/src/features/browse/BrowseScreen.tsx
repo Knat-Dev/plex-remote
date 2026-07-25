@@ -160,6 +160,7 @@ export function BrowseScreen() {
         <VirtualPosterGrid
           items={visibleItems}
           loading={list.isLoading}
+          onRefresh={() => list.refetch()}
           onOpen={open}
           onLongPress={longPress}
         />

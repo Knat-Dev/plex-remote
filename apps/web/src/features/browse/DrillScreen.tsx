@@ -48,6 +48,7 @@ export function DrillScreen() {
         <VirtualPosterGrid
           items={children.data ?? []}
           loading={children.isLoading}
+          onRefresh={() => children.refetch()}
           onOpen={open}
           onLongPress={longPress}
         />

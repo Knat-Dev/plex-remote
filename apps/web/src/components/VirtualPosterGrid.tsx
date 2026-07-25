@@ -1,12 +1,17 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { Loader2 } from 'lucide-react';
 import type { MediaItemDto } from '../api/types.ts';
 import { MediaCard } from './MediaCard.tsx';
+import { usePullToRefresh } from '../hooks/usePullToRefresh.ts';
+import { cn } from '@/lib/utils';
 
 interface VirtualPosterGridProps {
   items: MediaItemDto[];
   /** Render skeleton cells in the exact same layout instead of items. */
   loading?: boolean;
+  /** Enables native-style pull-to-refresh; resolves when the refetch settles. */
+  onRefresh?: () => Promise<unknown>;
   onOpen: (item: MediaItemDto) => void;
   onLongPress: (item: MediaItemDto) => void;
 }
@@ -23,9 +28,21 @@ const SKELETON_COUNT = 12;
  * grid element never unmounts between loading and loaded — the swap is
  * pixel-identical with no reflow, remeasure flash or column jump.
  */
-export function VirtualPosterGrid({ items, loading, onOpen, onLongPress }: VirtualPosterGridProps) {
+export function VirtualPosterGrid({
+  items,
+  loading,
+  onRefresh,
+  onOpen,
+  onLongPress,
+}: VirtualPosterGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
+  const noop = useRef(() => Promise.resolve()).current;
+  const { pull, progress, refreshing, dragging } = usePullToRefresh(
+    scrollRef,
+    onRefresh ?? noop,
+    Boolean(onRefresh),
+  );
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -63,10 +80,32 @@ export function VirtualPosterGrid({ items, loading, onOpen, onLongPress }: Virtu
   return (
     <div
       ref={scrollRef}
-      className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 [scrollbar-gutter:stable]"
+      className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 [scrollbar-gutter:stable]"
     >
+      {(pull > 0 || refreshing) && (
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center"
+          style={{
+            transform: `translateY(${Math.max(0, pull - 26)}px)`,
+            transition: dragging ? 'none' : 'transform 0.25s ease-out',
+            opacity: refreshing ? 1 : progress,
+          }}
+        >
+          <Loader2
+            className={cn('size-5 text-muted-foreground', refreshing && 'animate-spin')}
+            style={refreshing ? undefined : { transform: `rotate(${progress * 270}deg)` }}
+          />
+        </div>
+      )}
       {width > 0 && (
-        <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+        <div
+          className="relative w-full"
+          style={{
+            height: virtualizer.getTotalSize(),
+            transform: pull > 0 ? `translateY(${pull}px)` : undefined,
+            transition: dragging ? 'none' : 'transform 0.25s ease-out',
+          }}
+        >
           {virtualizer.getVirtualItems().map((row) => (
             <div
               key={row.key}
