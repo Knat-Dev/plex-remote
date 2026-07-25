@@ -15,6 +15,11 @@ const EDGE = 4; // px of overflow tolerance before scrolling kicks in
 const PAUSE_MS = 2000; // dwell at each end
 const TRAVEL_MS = 6000; // one direction of travel
 const TOTAL_MS = 2 * PAUSE_MS + 2 * TRAVEL_MS;
+// Ease applied WITHIN each travel segment (easeInOutCubic): the text glides up
+// to speed and back down instead of jerking on/off. Because it eases per
+// segment inside the shared cycle, every marquee still starts, peaks and stops
+// at the exact same instants — the global sync is untouched.
+const TRAVEL_EASING = 'cubic-bezier(0.65, 0, 0.35, 1)';
 
 /**
  * Spotify-style title marquee: static unless the text overflows; scrolls
@@ -75,10 +80,17 @@ export function TitleMarquee({ text, className, fade = 24 }: TitleMarqueeProps) 
 
       animation = inner.animate(
         [
-          { transform: 'translateX(0)', offset: 0 },
-          { transform: 'translateX(0)', offset: pause },
-          { transform: `translateX(-${distance}px)`, offset: pause + travel },
-          { transform: `translateX(-${distance}px)`, offset: pause + travel + pause },
+          // Per-keyframe easing applies to the segment that STARTS at that
+          // keyframe. Dwell segments are linear (no motion); the two travel
+          // segments ease in and out.
+          { transform: 'translateX(0)', offset: 0, easing: 'linear' },
+          { transform: 'translateX(0)', offset: pause, easing: TRAVEL_EASING },
+          { transform: `translateX(-${distance}px)`, offset: pause + travel, easing: 'linear' },
+          {
+            transform: `translateX(-${distance}px)`,
+            offset: pause + travel + pause,
+            easing: TRAVEL_EASING,
+          },
           { transform: 'translateX(0)', offset: 1 },
         ],
         {
